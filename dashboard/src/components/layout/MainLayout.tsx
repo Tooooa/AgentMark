@@ -1,15 +1,16 @@
 
 import React from 'react';
 import { useI18n } from '../../i18n/I18nContext';
-import { Languages } from 'lucide-react';
+import { Languages, Home } from 'lucide-react';
 
 type MainLayoutProps = {
     left: React.ReactNode;
     middle: React.ReactNode;
     right: React.ReactNode;
+    onHome: () => void;
 };
 
-const MainLayout: React.FC<MainLayoutProps> = ({ left, middle, right }) => {
+const MainLayout: React.FC<MainLayoutProps> = ({ left, middle, right, onHome }) => {
     const { locale, setLocale, t } = useI18n();
 
     return (
@@ -23,13 +24,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ left, middle, right }) => {
                     <p className="text-xs text-slate-500 mt-1">{t('subtitle')}</p>
                 </div>
 
-                <button
-                    onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors text-sm font-medium text-slate-600"
-                >
-                    <Languages size={14} />
-                    {locale === 'en' ? 'English' : '中文'}
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={onHome}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors text-sm font-medium text-slate-600"
+                        title={locale === 'en' ? 'Back to Home' : '返回首页'}
+                    >
+                        <Home size={14} />
+                        {locale === 'en' ? 'Home' : '首页'}
+                    </button>
+
+                    <button
+                        onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors text-sm font-medium text-slate-600"
+                    >
+                        <Languages size={14} />
+                        {locale === 'en' ? 'English' : '中文'}
+                    </button>
+                </div>
             </header>
 
             {/* Main Content - Flex-1 (Takes remaining height) */}

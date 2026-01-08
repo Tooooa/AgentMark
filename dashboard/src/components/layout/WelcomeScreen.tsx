@@ -51,23 +51,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         <div
             className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden"
         >
-            {/* Live Mode Toggle - Top Right (My Logic) */}
-            <div className="absolute top-6 right-6 flex gap-1 bg-slate-100 p-1 rounded-lg z-50">
-                <button
-                    onClick={() => isLiveMode && onToggleLiveMode()}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-wider transition-all ${!isLiveMode ? 'bg-white text-slate-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                        }`}
-                >
-                    Simulation
-                </button>
-                <button
-                    onClick={() => !isLiveMode && onToggleLiveMode()}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-wider transition-all ${isLiveMode ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                        }`}
-                >
-                    <Zap size={12} fill="currentColor" /> Live
-                </button>
-            </div>
+
 
             {/* Background elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -160,9 +144,29 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             {/* Header */}
-                                            <div className="flex items-center gap-3 mb-6">
-                                                <span className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">02</span>
-                                                <h2 className="text-xl font-bold text-slate-900">Configuration</h2>
+                                            <div className="flex items-center justify-between mb-6">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">02</span>
+                                                    <h2 className="text-xl font-bold text-slate-900">Configuration</h2>
+                                                </div>
+
+                                                {/* Live Mode Toggle - Moved Here */}
+                                                <div className="flex gap-1 bg-slate-50 p-1 rounded-lg border border-slate-100">
+                                                    <button
+                                                        onClick={() => isLiveMode && onToggleLiveMode()}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-wider transition-all ${!isLiveMode ? 'bg-white text-slate-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'
+                                                            }`}
+                                                    >
+                                                        Sim
+                                                    </button>
+                                                    <button
+                                                        onClick={() => !isLiveMode && onToggleLiveMode()}
+                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-wider transition-all ${isLiveMode ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                                                            }`}
+                                                    >
+                                                        <Zap size={12} fill="currentColor" /> Live
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* Form */}

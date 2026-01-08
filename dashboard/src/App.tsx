@@ -121,6 +121,10 @@ function App() {
                       targetPayload={targetPayload}
                     />
                   }
+                  onHome={() => {
+                    setHasStarted(false);
+                    handleReset();
+                  }}
                 />
               )}
             </motion.div>
