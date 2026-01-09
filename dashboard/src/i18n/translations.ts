@@ -28,6 +28,23 @@ export const translations = {
         binSelection: '选中分桶 (Uniform Bin)',
         uniformSlice: '均匀分桶',
         samplingExplanation: '基于差分重组选中 Bin {binSize} (包含前 {k} 个动作)，并通过循环移位 (Cyclic Shift) 选中 "{action}" 以嵌入载荷。',
+        // Modal Translations
+        diffSamplingViz: '差分采样可视化',
+        randomSamplingViz: '随机加权采样可视化',
+        probDecomp: '概率分解 (排序与切片)',
+        probDist: '概率分布',
+        recombination: '重组 (堆叠分桶)',
+        randomSampling: '随机采样',
+        replay: '重播',
+        howDiffWorks: '差分采样原理:',
+        howRandomWorks: '随机加权采样原理:',
+        // Steps for explanation
+        diffStep1: '排序与切片：我们将所有候选动作按概率排序。在每个概率水平上绘制水平“切片线”。',
+        diffStep2: '创建分桶：每个切片差值形成一个“层”。由于有 k 个候选者的概率大于或等于此水平，因此该层重复 k 次以形成 Bin T_k。',
+        diffStep3: '堆叠：如右图所示，Bin T_k 本质上是来自前 k 个动作的小块的堆叠。如果水印选择了 Bin T_k，我们随后进行循环移位以选择这 k 个动作中的一个。',
+        randomStep1: '分布：动作按概率排序。',
+        randomStep2: '累积权重：我们将概率堆叠以形成 0 到 1 的范围。',
+        randomStep3: '随机选择：生成一个随机数（类似“转盘”）。该随机数落入的范围对应的动作为选中动作。',
     },
     en: {
         title: 'AgentMark Demonstration',
@@ -55,5 +72,22 @@ export const translations = {
         binSelection: 'Selected Bin',
         uniformSlice: 'Uniform Bin',
         samplingExplanation: 'Sampled Bin {binSize} (top-{k} actions), then selected "{action}" via Cyclic Shift to embed payload.',
+        // Modal Translations
+        diffSamplingViz: 'Differential Sampling Visualization',
+        randomSamplingViz: 'Random Weighted Sampling Visualization',
+        probDecomp: '1. Probability Decomposition (Sort & Slice)',
+        probDist: '1. Probability Distribution',
+        recombination: '2. Recombination (Stacked Bins)',
+        randomSampling: '2. Random Sampling',
+        replay: 'Replay',
+        howDiffWorks: 'How Differential Sampling Works:',
+        howRandomWorks: 'How Random Weighted Sampling Works:',
+        // Steps for explanation
+        diffStep1: '1. Sort & Slice: We sort all candidate actions by probability. Horizontal "slicing lines" are drawn at each probability level.',
+        diffStep2: '2. Create Bins: Each slice difference forms a "layer". Since k candidates have probability greater than or equal to this level, this layer is repeated k times to form Bin T_k.',
+        diffStep3: '3. Stacking: As shown in the right chart, Bin T_k is essentially a stack of small pieces from the top k actions. If the watermark selects Bin T_k, we then do a cyclic shift to pick one of these k actions.',
+        randomStep1: '1. Distribution: Candidates are ranked by probability.',
+        randomStep2: '2. Cumulative Weight: We stack the probabilities to form a range from 0 to 1.',
+        randomStep3: '3. Random Selection: A random number is generated effectively "spinning the wheel". The candidate whose range covers this number is selected.',
     }
 };

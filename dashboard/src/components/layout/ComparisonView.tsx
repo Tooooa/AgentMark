@@ -8,18 +8,28 @@ import { Columns, Eye, EyeOff } from 'lucide-react';
 interface ComparisonViewProps {
     visibleSteps: Step[];
     erasedIndices: Set<number>;
+    scenarioId?: string;
+    evaluationResult?: { model_a_score: number, model_b_score: number, reason: string } | null;
 }
 
-const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedIndices }) => {
+const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedIndices, scenarioId, evaluationResult }) => {
 
     const scrollRefA = useRef<HTMLDivElement>(null);
     const scrollRefB = useRef<HTMLDivElement>(null);
     const bottomRefA = useRef<HTMLDivElement>(null);
     const bottomRefB = useRef<HTMLDivElement>(null);
+    const isAtBottomRef = useRef(true); // Track user scroll position
 
-    // Sync Scroll Logic (Simplified for auto-scroll)
+    // Reset scroll to bottom when scenario changes
     useEffect(() => {
-        if (visibleSteps.length > 0) {
+        isAtBottomRef.current = true;
+        bottomRefA.current?.scrollIntoView({ behavior: 'auto' });
+        bottomRefB.current?.scrollIntoView({ behavior: 'auto' });
+    }, [scenarioId]);
+
+    // Smart auto-scroll when steps change
+    useEffect(() => {
+        if (visibleSteps.length > 0 && isAtBottomRef.current) {
             bottomRefA.current?.scrollIntoView({ behavior: 'smooth' });
             bottomRefB.current?.scrollIntoView({ behavior: 'smooth' });
         }
@@ -34,6 +44,9 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedInd
         const targetRef = source === 'A' ? scrollRefB : scrollRefA;
 
         if (sourceRef.current && targetRef.current) {
+            // Check if at bottom (using source)
+            const { scrollTop, scrollHeight, clientHeight } = sourceRef.current;
+            isAtBottomRef.current = scrollHeight - scrollTop - clientHeight < 50;
 
             // Verify if we should sync (avoid loops) - rough implementation
             // targetRef.current.scrollTop = ratio * (targetRef.current.scrollHeight - targetRef.current.clientHeight);
@@ -56,30 +69,58 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedInd
             <div className="flex-1 grid grid-cols-2 gap-6 min-h-0">
                 {/* Left: No Watermark */}
                 <div className="flex flex-col gap-2 rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
-                    <div className="p-3 bg-slate-50 border-b border-slate-100 text-center font-bold text-slate-600 text-sm">
-                        Original Model (No Watermark)
+                    <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                        <span className="font-bold text-slate-600 text-sm">Original (Base)</span>
+                        {evaluationResult && (
+                            <span className="text-xs font-bold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">
+                                Score: {evaluationResult.model_a_score.toFixed(1)}
+                            </span>
+                        )}
                     </div>
                     <div
                         className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-200"
                         ref={scrollRefA}
                         onScroll={() => handleScroll('A')}
                     >
-                        {visibleSteps.map((step) => (
-                            <StepCard
-                                key={`nw-${step.stepIndex}`}
-                                step={step}
-                                isErased={false} // Assume no erasure simulation on base model for clarity? OR same erasure. Let's assume perfect transmission for base as control? Or same environment. Let's use false for now to show "clean" output.
-                                showWatermarkDetails={false}
-                            />
-                        ))}
+                        {visibleSteps.map((step) => {
+                            // Construct Baseline Step Object if available
+                            const baselineStep: Step = step.baseline ? {
+                                ...step,
+                                thought: step.baseline.thought,
+                                action: step.baseline.action,
+                                toolDetails: step.baseline.toolDetails, // Ensure property name matches Step type
+                                distribution: step.baseline.distribution,
+                                stepType: step.baseline.stepType,
+                                finalAnswer: step.baseline.finalAnswer,
+                                watermark: { bits: "", matrixRows: [], rankContribution: 0 },
+                                metrics: undefined // Baseline metrics might not be tracked or need separate field?
+                            } : step;
+
+                            return (
+                                <StepCard
+                                    key={`nw-${step.stepIndex}`}
+                                    step={baselineStep}
+                                    isErased={false}
+                                    showWatermarkDetails={false}
+                                    showDistribution={true}
+                                />
+                            );
+                        })}
                         <div ref={bottomRefA} className="h-4" />
                     </div>
                 </div>
 
                 {/* Right: Watermarked */}
                 <div className="flex flex-col gap-2 rounded-2xl bg-white border border-indigo-200 overflow-hidden shadow-md ring-1 ring-indigo-50">
-                    <div className="p-3 bg-indigo-50 border-b border-indigo-100 text-center font-bold text-indigo-700 text-sm flex items-center justify-center gap-2">
-                        Ours (Watermarked)
+                    <div className="p-3 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
+                        <span className="font-bold text-indigo-700 text-sm flex items-center gap-2">
+                            Ours (Watermarked)
+                        </span>
+                        {evaluationResult && (
+                            <span className="text-xs font-bold text-indigo-600 bg-white px-2 py-0.5 rounded border border-indigo-100 shadow-sm">
+                                Score: {evaluationResult.model_b_score.toFixed(1)}
+                            </span>
+                        )}
                     </div>
                     <div
                         className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-indigo-100"

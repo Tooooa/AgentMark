@@ -1,0 +1,305 @@
+{
+  "id": "8ef0fe80-b4c0-41c4-90f9-9dc04694d1cc",
+  "title": {
+    "en": "Trending and Hashtag Video Analysis",
+    "zh": "Trending and Hashtag Video Analysis"
+  },
+  "taskName": "Live Execution",
+  "userQuery": "I want to explore trending content on social media. Can you provide me with the current trending feed of videos? I would like to limit the output to 20 records. Please include the direct URLs to the videos and their statistics. Additionally, if possible, I would like to filter the feed based on a specific hashtag, such as #summer.",
+  "totalSteps": 3,
+  "steps": [
+    {
+      "stepIndex": 0,
+      "thought": "The user wants to explore trending content with a limit of 20 records, including direct video URLs and statistics. They also mention filtering by a hashtag like #summer. I can use the 'Social Media Data TT - Trending feed (Video posts)' tool to get trending videos, but it doesn't support hashtag filtering. For hashtag-specific content, I should use the 'Social Media Data TT - Hashtag feed (Video posts)' tool with name='summer'. However, the user first asks for the current trending feed, so I'll start with that to provide general trending videos. I'll set limit=20 as requested.",
+      "action": "Call: Social_Media_Data_TT__Trending_feed_Video_posts",
+      "distribution": [
+        {
+          "name": "Social_Media_Data_TT__Trending_feed_Video_posts",
+          "prob": 0.95,
+          "isSelected": true
+        },
+        {
+          "name": "Social_Media_Data_TT__Trending_feed_Video_posts_V2",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts_V2",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "TokApi_mobile_version__v1_feed_recommended",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Finish",
+          "prob": 0.01,
+          "isSelected": false
+        }
+      ],
+      "watermark": {
+        "bits": "1",
+        "matrixRows": [
+          [
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "rankContribution": 1
+      },
+      "stepType": "tool",
+      "toolDetails": "tool=Social_Media_Data_TT__Trending_feed_Video_posts category=Social api=Trending feed (Video posts) args={'limit': 20} | desc=Get current trending feed. \n\n- Due to nature of this endpoint the **max_c...",
+      "baseline": {
+        "thought": "The user wants to explore trending content with a limit of 20 records, including direct video URLs and statistics. They also mention filtering by a hashtag like #summer. I can use the 'Social_Media_Data_TT__Trending_feed_Video_posts' tool to get trending videos with a limit of 20, which provides URLs and stats. However, that tool doesn't support hashtag filtering. For hashtag-specific content, I should use 'Social_Media_Data_TT__Hashtag_feed_Video_posts' with name='summer' and limit=20. But the user's primary request is for the 'current trending feed', so I'll start with the trending feed tool. If they want hashtag-filtered trending, I might need to clarify, but I'll proceed with the trending feed as requested.",
+        "action": "Call: Social_Media_Data_TT__Trending_feed_Video_posts",
+        "toolDetails": "tool=Social_Media_Data_TT__Trending_feed_Video_posts category=Social api=Trending feed (Video posts) args={'limit': 20} | desc=Get current trending feed. \n\n- Due to nature of this endpoint the **max_c...",
+        "distribution": [
+          {
+            "name": "Social_Media_Data_TT__Trending_feed_Video_posts",
+            "prob": 0.95,
+            "isSelected": true
+          },
+          {
+            "name": "Social_Media_Data_TT__Trending_feed_Video_posts_V2",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts_V2",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "TokApi_mobile_version__v1_feed_recommended",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Finish",
+            "prob": 0.01,
+            "isSelected": false
+          }
+        ],
+        "stepType": "tool",
+        "metrics": {
+          "latency": 8.262479782104492,
+          "tokens": 210.5
+        }
+      },
+      "metrics": {
+        "latency": 6.644276142120361,
+        "tokens": 176.25
+      }
+    },
+    {
+      "stepIndex": 1,
+      "thought": "The tool executed successfully and returned trending feed data. I need to examine the output to see if it includes the required information (direct video URLs and statistics). The user also mentioned filtering by a hashtag like #summer, but the trending feed tool doesn't support hashtag filtering. I should now use the hashtag feed tool to get videos specifically for #summer, also with a limit of 20 records, to provide a comprehensive response. I'll first parse the trending feed results, then fetch the hashtag feed.",
+      "action": "Call: Social_Media_Data_TT__Hashtag_feed_Video_posts",
+      "distribution": [
+        {
+          "name": "Social_Media_Data_TT__Trending_feed_Video_posts",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Social_Media_Data_TT__Trending_feed_Video_posts_V2",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts_V2",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts",
+          "prob": 0.95,
+          "isSelected": true
+        },
+        {
+          "name": "TokApi_mobile_version__v1_feed_recommended",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Finish",
+          "prob": 0.01,
+          "isSelected": false
+        }
+      ],
+      "watermark": {
+        "bits": "1",
+        "matrixRows": [
+          [
+            1,
+            0,
+            1,
+            1
+          ]
+        ],
+        "rankContribution": 1
+      },
+      "stepType": "tool",
+      "toolDetails": "tool=Social_Media_Data_TT__Hashtag_feed_Video_posts category=Social api=Hashtag feed (Video posts) args={'name': 'summer', 'limit': 20} | desc=Get current hashtag feed. \n\n- Before testing don't forget...",
+      "baseline": {
+        "thought": "The tool executed successfully and returned data for the trending feed. I have the output with 20 records, including video URLs and statistics. The user also mentioned filtering by a hashtag like #summer, but the trending feed tool doesn't support that. To address both parts of the request, I should also fetch hashtag-specific content using the 'Social_Media_Data_TT__Hashtag_feed_Video_posts' tool with name='summer' and limit=20. This will provide videos tagged with #summer, including their URLs and stats. I'll then combine or present both sets of data to the user. Let me first get the hashtag feed.",
+        "action": "Call: Social_Media_Data_TT__Hashtag_feed_Video_posts",
+        "toolDetails": "tool=Social_Media_Data_TT__Hashtag_feed_Video_posts category=Social api=Hashtag feed (Video posts) args={'name': 'summer', 'limit': 20} | desc=Get current hashtag feed. \n\n- Before testing don't forget...",
+        "distribution": [
+          {
+            "name": "Social_Media_Data_TT__Trending_feed_Video_posts",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Social_Media_Data_TT__Trending_feed_Video_posts_V2",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts_V2",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts",
+            "prob": 0.95,
+            "isSelected": true
+          },
+          {
+            "name": "TokApi_mobile_version__v1_feed_recommended",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Finish",
+            "prob": 0.01,
+            "isSelected": false
+          }
+        ],
+        "stepType": "tool",
+        "metrics": {
+          "latency": 7.4969682693481445,
+          "tokens": 187.25
+        }
+      },
+      "metrics": {
+        "latency": 6.403062582015991,
+        "tokens": 165.75
+      }
+    },
+    {
+      "stepIndex": 2,
+      "thought": "Task Completed",
+      "action": "Call: Finish",
+      "distribution": [
+        {
+          "name": "Social_Media_Data_TT__Trending_feed_Video_posts",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Social_Media_Data_TT__Trending_feed_Video_posts_V2",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts_V2",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "TokApi_mobile_version__v1_feed_recommended",
+          "prob": 0.01,
+          "isSelected": false
+        },
+        {
+          "name": "Finish",
+          "prob": 0.95,
+          "isSelected": true
+        }
+      ],
+      "watermark": {
+        "bits": "0",
+        "matrixRows": [
+          [
+            1,
+            0,
+            0,
+            0
+          ]
+        ],
+        "rankContribution": 1
+      },
+      "stepType": "finish",
+      "toolDetails": "[Finish] ",
+      "baseline": {
+        "thought": "I have successfully retrieved both the trending feed and the hashtag feed for #summer, each with 20 records. The trending feed provides current popular videos, while the hashtag feed shows videos specifically tagged with #summer. Both include direct URLs and statistics as requested. I now have enough information to present to the user. I should summarize the findings, noting the key details from each feed, such as the number of videos, example statistics, and availability of video URLs. I'll then provide a final answer that combines this information.",
+        "action": "Call: Finish",
+        "toolDetails": "[Finish] I have gathered the current trending feed and the hashtag feed for #summer as requested. Here's a summary:\n\n1. **Trending Feed (Video Posts)**: Retrieved 20 trending videos from the platform. Each video object includes metadata such as video ID, description, direct video URLs (with and without watermark), and statistics like play count, share count, comment count, and like count. Example statistics show high engagement, with some videos having millions of plays and thousands of likes.\n\n2. **Hashtag Feed for #summer**: Retrieved 20 videos tagged with #summer. These videos also include direct URLs and detailed statistics. The hashtag feed focuses on content related to summer, with videos showing seasonal activities, travel, and events.\n\nBoth feeds provide the necessary data: direct video URLs (e.g., `video.play_addr`, `video.download_addr`) and statistics (`statistics` field with play, share, comment, and like counts). You can explore these to analyze trending content and summer-specific trends.\n\nIf you need more specific details or additional filtering, let me know!",
+        "distribution": [
+          {
+            "name": "Social_Media_Data_TT__Trending_feed_Video_posts",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Social_Media_Data_TT__Trending_feed_Video_posts_V2",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts_V2",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Social_Media_Data_TT__Hashtag_feed_Video_posts",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "TokApi_mobile_version__v1_feed_recommended",
+            "prob": 0.01,
+            "isSelected": false
+          },
+          {
+            "name": "Finish",
+            "prob": 0.95,
+            "isSelected": true
+          }
+        ],
+        "stepType": "finish",
+        "finalAnswer": "I have gathered the current trending feed and the hashtag feed for #summer as requested. Here's a summary:\n\n1. **Trending Feed (Video Posts)**: Retrieved 20 trending videos from the platform. Each video object includes metadata such as video ID, description, direct video URLs (with and without watermark), and statistics like play count, share count, comment count, and like count. Example statistics show high engagement, with some videos having millions of plays and thousands of likes.\n\n2. **Hashtag Feed for #summer**: Retrieved 20 videos tagged with #summer. These videos also include direct URLs and detailed statistics. The hashtag feed focuses on content related to summer, with videos showing seasonal activities, travel, and events.\n\nBoth feeds provide the necessary data: direct video URLs (e.g., `video.play_addr`, `video.download_addr`) and statistics (`statistics` field with play, share, comment, and like counts). You can explore these to analyze trending content and summer-specific trends.\n\nIf you need more specific details or additional filtering, let me know!",
+        "metrics": {
+          "latency": 13.837186574935913,
+          "tokens": 433.25
+        }
+      },
+      "metrics": {
+        "latency": 18.587667226791382,
+        "tokens": 535.75
+      },
+      "finalAnswer": "Task Completed"
+    }
+  ]
+}

@@ -27,7 +27,25 @@ export type Step = {
     toolDetails?: string;
     distribution: DistributionItem[];
     watermark: StepWatermark;
-    stepType: 'tool' | 'finish' | 'other';
+    stepType: 'tool' | 'finish' | 'user_input' | 'other';
+    metrics?: {
+        latency: number;
+        tokens: number;
+    };
+    finalAnswer?: string;
+    // New field for Comparison Mode (Dual Agent)
+    baseline?: {
+        thought: string;
+        action: string;
+        toolDetails?: string;
+        distribution: DistributionItem[];
+        stepType: 'tool' | 'finish' | 'user_input' | 'other';
+        finalAnswer?: string;
+        metrics?: {
+            latency: number;
+            tokens: number;
+        };
+    };
 };
 
 export type Trajectory = {
@@ -40,6 +58,7 @@ export type Trajectory = {
     userQuery: string;
     totalSteps: number;
     steps: Step[];
+    evaluation?: { model_a_score: number, model_b_score: number, reason: string };
 };
 
 // --- Helper Functions ---
@@ -138,7 +157,8 @@ const parseToolBenchData = (jsonData: any, manualId: string, titleEn: string, ti
                 matrixRows,
                 rankContribution: rankContrib
             },
-            stepType: isFinish ? 'finish' : 'tool'
+            stepType: isFinish ? 'finish' : 'tool',
+            finalAnswer: isFinish ? (jsonData.final_answer?.final_answer || toolOutput) : undefined,
         });
     });
 

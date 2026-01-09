@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import MainLayout from './components/layout/MainLayout';
 import ControlPanel from './components/controls/ControlPanel';
@@ -6,6 +6,8 @@ import FlowFeed from './components/execution/FlowFeed';
 import DecoderPanel from './components/decoder/DecoderPanel';
 import ComparisonView from './components/layout/ComparisonView';
 import WelcomeScreen from './components/layout/WelcomeScreen';
+import SaveScenarioModal from './components/modals/SaveScenarioModal';
+import EvaluationModal from './components/execution/EvaluationModal';
 import { useSimulation } from './hooks/useSimulation';
 import { I18nProvider } from './i18n/I18nContext';
 
@@ -15,6 +17,7 @@ function App() {
     activeScenario,
     activeScenarioId,
     setActiveScenarioId,
+    refreshScenarios, // New
     isPlaying,
     setIsPlaying,
     currentStepIndex,
@@ -27,22 +30,82 @@ function App() {
     visibleSteps,
     isLiveMode,
     setIsLiveMode,
-    apiKey,
+    handleInitSession,
+    setCustomQuery,
     setApiKey,
-    handleInitSession
+    customQuery,
+    sessionId,
+    apiKey, // Add back
+    payload, // from hook
+    setPayload, // from hook
+    handleContinue, // from hook
+    handleNewConversation: startNewConversation,
+
+    // Evaluation
+    evaluateSession,
+    isEvaluating,
+    evaluationResult,
+    isEvaluationModalOpen,
+    setIsEvaluationModalOpen,
+
+    // Comparison
+    isComparisonMode,
+    setIsComparisonMode
   } = useSimulation();
 
   const [hasStarted, setHasStarted] = useState(false);
-  const [isComparisonMode, setIsComparisonMode] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [targetPayload, setTargetPayload] = useState('AgentMark'); // Used for display
+  // const [isComparisonMode, setIsComparisonMode] = useState(false); // Removed
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
-  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number }) => {
+
+  // NOTE: targetPayload is now redundant if we use hook's payload?
+  // But DecoderPanel uses it. Let's keep using hook's payload for consistency
+  // or sync them.
+  // Actually, let's just use the hook's payload directly for DecoderPanel too, 
+  // but DecoderPanel prop is 'targetPayload'.
+
+  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number; query?: string }) => {
     setActiveScenarioId(config.scenarioId);
-    setTargetPayload(config.payload);
+    if (config.query) {
+      setCustomQuery(config.query);
+    } else {
+      setCustomQuery(""); // Reset if not custom
+    }
+    setPayload(config.payload); // Sync to hook
     setErasureRate(config.erasureRate);
+    // Note: setHasStarted logic will trigger the effect below
     setHasStarted(true);
   };
+
+  const handleNewConversation = async () => {
+    // 1. Auto-Save & Reset via Hook
+    await startNewConversation();
+    // 2. Stay on Dashboard (do not reset hasStarted)
+    // setHasStarted(false); // REMOVED
+  };
+
+  // Auto-Start Effect for Custom Queries
+  useEffect(() => {
+    if (hasStarted && isLiveMode && customQuery && !sessionId) {
+      handleInitSession();
+    }
+  }, [hasStarted, isLiveMode, customQuery, sessionId, handleInitSession]);
+
+  // Stats Calculation
+  let liveStats = undefined;
+  if (activeScenario && activeScenario.steps.length > 0) {
+    const metricsSteps = activeScenario.steps.filter(s => s.metrics);
+    if (metricsSteps.length > 0) {
+      const totalLat = metricsSteps.reduce((sum, s) => sum + (s.metrics?.latency || 0), 0);
+      const totalTok = metricsSteps.reduce((sum, s) => sum + (s.metrics?.tokens || 0), 0);
+      // Latency in ms (from seconds)
+      // Tokens/sec = totalTokens / totalTime
+      liveStats = {
+        avgLatency: parseFloat((totalLat * 1000 / metricsSteps.length).toFixed(2)),
+        avgTokens: totalLat > 0 ? parseFloat((totalTok / totalLat).toFixed(0)) : 0
+      };
+    }
+  }
 
   const commonControlPanel = (
     <ControlPanel
@@ -65,6 +128,15 @@ function App() {
       onInitSession={handleInitSession}
       isComparisonMode={isComparisonMode}
       onToggleComparisonMode={() => setIsComparisonMode(!isComparisonMode)}
+      liveStats={liveStats}
+      currentScenario={activeScenario}
+      onNew={handleNewConversation}
+      onSave={() => setIsSaveModalOpen(true)}
+
+      // Evaluation
+      onEvaluate={evaluateSession}
+      isEvaluating={isEvaluating}
+      evaluationResult={evaluationResult}
     />
   );
 
@@ -80,6 +152,8 @@ function App() {
               initialErasureRate={erasureRate}
               isLiveMode={isLiveMode}
               onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
+              apiKey={apiKey}
+              setApiKey={setApiKey}
             />
           ) : (
             <motion.div
@@ -100,6 +174,8 @@ function App() {
                     <ComparisonView
                       visibleSteps={visibleSteps}
                       erasedIndices={erasedIndices}
+                      scenarioId={activeScenario.id}
+                      evaluationResult={evaluationResult}
                     />
                   </div>
                 </div>
@@ -112,13 +188,19 @@ function App() {
                       visibleSteps={visibleSteps}
                       erasedIndices={erasedIndices}
                       userQuery={activeScenario.userQuery}
+                      onContinue={handleContinue}
+                      isPlaying={isPlaying}
+                      onTogglePlay={() => setIsPlaying(!isPlaying)}
+                      scenarioId={activeScenario.id}
                     />
                   }
                   right={
                     <DecoderPanel
                       visibleSteps={visibleSteps}
                       erasedIndices={erasedIndices}
-                      targetPayload={targetPayload}
+                      targetPayload={payload}
+                      erasureRate={erasureRate}
+                      setErasureRate={setErasureRate}
                     />
                   }
                   onHome={() => {
@@ -130,6 +212,23 @@ function App() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        <SaveScenarioModal
+          isOpen={isSaveModalOpen}
+          onClose={() => setIsSaveModalOpen(false)}
+          scenarioData={activeScenario}
+          onSaved={() => {
+            refreshScenarios();
+            // Optional: maybe confirm to user
+          }}
+        />
+
+        <EvaluationModal
+          isOpen={isEvaluationModalOpen}
+          onClose={() => setIsEvaluationModalOpen(false)}
+          result={evaluationResult}
+          isLoading={isEvaluating}
+        />
       </div>
     </I18nProvider>
   );

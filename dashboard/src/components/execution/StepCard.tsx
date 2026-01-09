@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import type { Step } from '../../data/mockData';
-import { Brain, Terminal, EyeOff, RotateCcw, ArrowRight, Activity, Bot } from 'lucide-react';
+import { Brain, Terminal, EyeOff, RotateCcw, ArrowRight, Activity, Bot, User } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
+import ReactMarkdown from 'react-markdown';
 import StepDetailModal from './StepDetailModal';
 
 interface StepCardProps {
     step: Step;
     isErased: boolean;
     showWatermarkDetails?: boolean;
+    showDistribution?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,7 +27,7 @@ const CustomTooltip = ({ active, payload }: any) => {
     return null;
 };
 
-const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetails = true }) => {
+const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetails = true, showDistribution = false }) => {
     const { t } = useI18n();
     const [isDetailOpen, setIsDetailOpen] = useState(false);
 
@@ -46,6 +48,31 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mixed-blend-overlay"></div>
                     <span className="font-mono font-bold text-rose-500 tracking-[0.2em] text-xs">{t('logDestroyed')}</span>
                     <span className="font-mono text-[10px] text-rose-400">ID: #{step.stepIndex} :: ERASURE</span>
+                </div>
+            </motion.div>
+        );
+    }
+
+    // User Input Bubble (Right Aligned)
+    if (step.stepType === 'user_input') {
+        return (
+            <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex justify-end mb-6"
+            >
+                <div className="flex gap-4 flex-row-reverse max-w-[80%]">
+                    <div className="flex-shrink-0 mt-1">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                            <User size={18} />
+                        </div>
+                    </div>
+                    <div className="flex-1 text-right">
+                        <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl rounded-tr-none p-4 text-white text-sm shadow-md inline-block text-left">
+                            <p className="font-bold text-[10px] text-indigo-100 mb-1 uppercase tracking-wide">User Continuation</p>
+                            {step.thought}
+                        </div>
+                    </div>
                 </div>
             </motion.div>
         );
@@ -106,11 +133,11 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                         </div>
 
                         {/* RIGHT: WATERMARK CHARTS */}
-                        {showWatermarkDetails && (
+                        {(showWatermarkDetails || showDistribution) && (
                             <div className="space-y-2 relative">
                                 <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                    <span>Differential Decoding</span>
-                                    <span>Bins</span>
+                                    <span>{showWatermarkDetails ? 'Differential Decoding' : 'Probability Distribution'}</span>
+                                    <span>{showWatermarkDetails ? 'Bins' : 'Sampling'}</span>
                                 </div>
                                 <div className="h-28 flex gap-3 items-center bg-slate-50/50 rounded-xl p-2 border border-slate-100">
                                     {/* Chart 1 */}
@@ -152,7 +179,7 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                                                         <Tooltip cursor={{ fill: 'transparent' }} content={() => null} />
                                                         <Bar dataKey="weight" radius={[2, 2, 0, 0]}>
                                                             {bins.map((e, idx) => (
-                                                                <Cell key={`b-${idx}`} fill={e.isTarget ? '#6366f1' : '#cbd5e1'} />
+                                                                <Cell key={`b-${idx}`} fill={e.isTarget ? (showWatermarkDetails ? '#6366f1' : '#f59e0b') : '#cbd5e1'} />
                                                             ))}
                                                         </Bar>
                                                     </BarChart>
@@ -166,19 +193,21 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                                 </div>
 
                                 {/* Pipeline Footer */}
-                                <div className="bg-indigo-50/50 rounded-lg p-1.5 flex items-center justify-between text-[10px] text-slate-500 font-mono border border-indigo-50">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">
-                                            PAYLOAD {step.watermark.bits}
+                                {showWatermarkDetails && step.watermark && (
+                                    <div className="bg-indigo-50/50 rounded-lg p-1.5 flex items-center justify-between text-[10px] text-slate-500 font-mono border border-indigo-50">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">
+                                                PAYLOAD {step.watermark.bits}
+                                            </div>
+                                            <span>Sort & Slice</span>
+                                            <ArrowRight size={8} />
+                                            <span>Select Bin <span className="text-indigo-600 font-bold">T_{step.distribution.findIndex(x => x.isSelected) + 1}</span></span>
+                                            <ArrowRight size={8} />
+                                            <RotateCcw size={8} />
+                                            <span>Sample</span>
                                         </div>
-                                        <span>Sort & Slice</span>
-                                        <ArrowRight size={8} />
-                                        <span>Select Bin <span className="text-indigo-600 font-bold">T_{step.distribution.findIndex(x => x.isSelected) + 1}</span></span>
-                                        <ArrowRight size={8} />
-                                        <RotateCcw size={8} />
-                                        <span>Sample</span>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -210,10 +239,48 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                     </div>
                 )}
 
+                {/* 4. FINISH RESPONSE Block */}
+                {step.stepType === 'finish' && (
+                    <div className="space-y-1 pl-4 border-l-2 border-emerald-200 ml-5">
+                        <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2">
+                            <Bot size={14} /> FINAL RESPONSE
+                        </div>
+                        <div className="bg-emerald-50/50 rounded-xl p-5 font-serif text-sm text-slate-800 shadow-sm border border-emerald-100 leading-relaxed">
+                            {/* Use ReactMarkdown to render the final answer */}
+                            <div className="prose prose-sm prose-emerald max-w-none text-slate-800">
+                                <ReactMarkdown
+                                    components={{
+                                        // Custom components to ensure styling matches the dashboard
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        strong: ({ node, ...props }: any) => <span className="font-bold text-slate-900" {...props} />,
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        ul: ({ node, ...props }: any) => <ul className="list-disc pl-4 space-y-1 my-2" {...props} />,
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        ol: ({ node, ...props }: any) => <ol className="list-decimal pl-4 space-y-1 my-2" {...props} />,
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        li: ({ node, ...props }: any) => <li className="pl-1" {...props} />,
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        h1: ({ node, ...props }: any) => <h3 className="text-lg font-bold text-emerald-800 mt-4 mb-2" {...props} />,
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        h2: ({ node, ...props }: any) => <h4 className="text-base font-bold text-emerald-700 mt-3 mb-2" {...props} />,
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        h3: ({ node, ...props }: any) => <h5 className="text-sm font-bold text-emerald-600 mt-2 mb-1" {...props} />,
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                        a: ({ node, ...props }: any) => <a className="text-emerald-600 underline hover:text-emerald-800" {...props} />,
+                                    }}
+                                >
+                                    {(step.finalAnswer || step.toolDetails || "").replace(/^\[Finish\]\s*/, "")}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <StepDetailModal
                     isOpen={isDetailOpen}
                     onClose={() => setIsDetailOpen(false)}
                     step={step}
+                    mode={showWatermarkDetails ? 'watermarked' : 'baseline'}
                 />
             </div>
         </motion.div>

@@ -1,25 +1,28 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Box, Cpu, Plus, CheckCircle2, ChevronDown, Search, Zap } from 'lucide-react';
+import { ArrowRight, Box, Cpu, Plus, Search, Zap } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
 import { scenarios } from '../../data/mockData';
 
 interface WelcomeScreenProps {
-    onStart: (config: { scenarioId: string; payload: string; erasureRate: number }) => void;
+    onStart: (config: { scenarioId: string; payload: string; erasureRate: number; query?: string }) => void;
     initialScenarioId: string;
     initialErasureRate: number;
     isLiveMode: boolean;
     onToggleLiveMode: () => void;
+    apiKey: string;
+    setApiKey: (key: string) => void;
 }
 
 type Mode = 'tool' | 'self' | 'add' | null;
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     onStart,
-    initialScenarioId,
     initialErasureRate,
     isLiveMode,
-    onToggleLiveMode
+    onToggleLiveMode,
+    apiKey,
+    setApiKey
 }) => {
     const { locale } = useI18n();
     const [selectedMode, setSelectedMode] = useState<Mode>(null);
@@ -29,8 +32,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     const [promptText, setPromptText] = useState('');
     const [showScenarioList, setShowScenarioList] = useState(false);
 
-    const [payload, setPayload] = useState('AgentMark');
-    const [erasureRate, setErasureRate] = useState(initialErasureRate);
+    const [payload, setPayload] = useState('1101');
+    const [erasureRate] = useState(initialErasureRate);
 
     const modes = [
         { id: 'tool', title: 'Tool use', icon: Box, desc: 'Agent uses external tools' },
@@ -89,8 +92,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                 layout
                                 initial={false}
                                 animate={{
-                                    width: isActive ? 700 : 256,
-                                    height: isActive ? 450 : 320,
+                                    width: isActive ? 800 : 256,
+                                    height: isActive ? 500 : 320,
                                     opacity: 1, // Always visible
                                     scale: 1,   // Always strictly 1
                                 }}
@@ -149,29 +152,24 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                     <span className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">02</span>
                                                     <h2 className="text-xl font-bold text-slate-900">Configuration</h2>
                                                 </div>
-
-                                                {/* Live Mode Toggle - Moved Here */}
-                                                <div className="flex gap-1 bg-slate-50 p-1 rounded-lg border border-slate-100">
-                                                    <button
-                                                        onClick={() => isLiveMode && onToggleLiveMode()}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-wider transition-all ${!isLiveMode ? 'bg-white text-slate-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'
-                                                            }`}
-                                                    >
-                                                        Sim
-                                                    </button>
-                                                    <button
-                                                        onClick={() => !isLiveMode && onToggleLiveMode()}
-                                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-wider transition-all ${isLiveMode ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                                                            }`}
-                                                    >
-                                                        <Zap size={12} fill="currentColor" /> Live
-                                                    </button>
-                                                </div>
+                                                {/* Live Mode Toggle REMOVED from here */}
                                             </div>
 
-                                            {/* Form */}
-                                            <div className="flex-1 space-y-6">
-                                                {/* Prompt Input (My Logic Injected Here) */}
+                                            {/* Form - Removed overflow-y-auto to allow dropdown to float */}
+                                            <div className="flex-1 space-y-6 overflow-visible pr-2">
+                                                {/* API Key Input */}
+                                                <div>
+                                                    <label className="block text-sm font-bold text-slate-700 mb-2">DeepSeek API Key</label>
+                                                    <input
+                                                        type="password"
+                                                        value={apiKey}
+                                                        onChange={(e) => setApiKey(e.target.value)}
+                                                        placeholder="sk-..."
+                                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm font-mono"
+                                                    />
+                                                </div>
+
+                                                {/* Prompt Input */}
                                                 <div>
                                                     <label className="block text-sm font-bold text-slate-700 mb-2">Prompt</label>
                                                     <div className="relative group z-20">
@@ -182,9 +180,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                             onChange={(e) => setPromptText(e.target.value)}
                                                             onFocus={() => setShowScenarioList(true)}
                                                             onKeyDown={(e) => e.key === 'Enter' && setShowScenarioList(false)}
-                                                            placeholder={locale === 'zh' ? "输入您的请求或选择场景..." : "Enter your query or select a scenario..."}
+                                                            placeholder={locale === 'zh' ? "输入您的请求 (Type here)..." : "Enter your query..."}
                                                             className="w-full pl-11 pr-10 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm"
                                                         />
+
                                                         {/* Dropdown */}
                                                         <AnimatePresence>
                                                             {showScenarioList && (
@@ -214,46 +213,45 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                     </div>
                                                 </div>
 
-                                                {/* Payload & Loss Rate */}
-                                                <div className="grid grid-cols-[1fr_1.5fr] gap-8 items-start">
-                                                    <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-2">Payload Content</label>
-                                                        <input
-                                                            type="text"
-                                                            value={payload}
-                                                            onChange={(e) => setPayload(e.target.value)}
-                                                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex justify-between mb-2">
-                                                            <label className="text-sm font-bold text-slate-700">Loss Rate: {erasureRate}%</label>
-                                                        </div>
-                                                        <div className="relative h-2 bg-slate-100 rounded-full mt-4">
-                                                            <div
-                                                                className="absolute h-full bg-indigo-100 rounded-full"
-                                                                style={{ width: '100%' }}
-                                                            />
-                                                            <input
-                                                                type="range"
-                                                                min="0" max="50" step="5"
-                                                                value={erasureRate}
-                                                                onChange={(e) => setErasureRate(Number(e.target.value))}
-                                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                                            />
-                                                            <div
-                                                                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-indigo-600 rounded-full pointer-events-none shadow-md transition-all"
-                                                                style={{ left: `${(erasureRate / 50) * 100}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
+                                                {/* Payload Content (Full Width) */}
+                                                <div>
+                                                    <label className="block text-sm font-bold text-slate-700 mb-2">Payload Content</label>
+                                                    <input
+                                                        type="text"
+                                                        value={payload}
+                                                        onChange={(e) => setPayload(e.target.value)}
+                                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm"
+                                                    />
                                                 </div>
                                             </div>
 
-                                            {/* Footer */}
-                                            <div className="flex justify-end mt-8 pt-4 border-t border-slate-50">
+                                            {/* Footer with Mode Switcher */}
+                                            <div className="flex items-center justify-between mt-8 pt-4 border-t border-slate-50">
+                                                {/* Large Mode Switcher */}
+                                                <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                                                    <button
+                                                        onClick={() => isLiveMode && onToggleLiveMode()}
+                                                        className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold tracking-wide transition-all ${!isLiveMode ? 'bg-white text-slate-700 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'
+                                                            }`}
+                                                    >
+                                                        Simulation
+                                                    </button>
+                                                    <button
+                                                        onClick={() => !isLiveMode && onToggleLiveMode()}
+                                                        className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold tracking-wide transition-all ${isLiveMode ? 'bg-rose-500 text-white shadow-md shadow-rose-200' : 'text-slate-400 hover:text-slate-600'
+                                                            }`}
+                                                    >
+                                                        <Zap size={16} fill="currentColor" /> Live Mode
+                                                    </button>
+                                                </div>
+
                                                 <button
-                                                    onClick={() => onStart({ scenarioId: selectedScenarioId || scenarios[0].id, payload, erasureRate })}
+                                                    onClick={() => onStart({
+                                                        scenarioId: selectedScenarioId || scenarios[0].id,
+                                                        payload,
+                                                        erasureRate,
+                                                        query: promptText
+                                                    })}
                                                     className={`px-8 py-3 rounded-xl font-bold text-base shadow-sm flex items-center gap-2 transition-all transform hover:-translate-y-0.5
                                                         ${selectedScenarioId || promptText
                                                             ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-indigo-200'

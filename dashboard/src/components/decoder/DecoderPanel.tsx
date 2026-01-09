@@ -3,16 +3,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Step } from '../../data/mockData';
 import { CheckCircle2, Lock, Database, FileDigit } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
+import RLNCDetailModal from './RLNCDetailModal';
+// REMOVED SuccessModal import
+
+
 
 interface DecoderPanelProps {
     visibleSteps: Step[];
     erasedIndices: Set<number>;
     targetPayload?: string;
+    erasureRate: number;
+    setErasureRate: (val: number) => void;
 }
 
-const REQUIRED_RANK = 16;
-
-const DecoderPanel: React.FC<DecoderPanelProps> = ({ visibleSteps, erasedIndices, targetPayload }) => {
+const DecoderPanel: React.FC<DecoderPanelProps> = ({
+    visibleSteps,
+    erasedIndices,
+    targetPayload,
+    erasureRate,
+    setErasureRate
+}) => {
     const { locale } = useI18n();
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -23,23 +33,82 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({ visibleSteps, erasedIndices
         }
     }, [visibleSteps]);
 
+    const requiredRank = targetPayload ? targetPayload.length : 16;
+
     const validSteps = visibleSteps.filter(s => !erasedIndices.has(s.stepIndex));
+    // Calculate current rank based on actual matrix rows received
+    // Assuming each non-erased step contributes 1 to rank (linear independence assumed for visualization simplicity)
     const currentRank = Math.min(
         validSteps.reduce((acc, step) => acc + (step.watermark.matrixRows?.length || 0), 0),
-        REQUIRED_RANK
+        requiredRank
     );
-    const progress = (currentRank / REQUIRED_RANK) * 100;
-    const isSuccess = currentRank >= REQUIRED_RANK;
+    const progress = (currentRank / requiredRank) * 100;
+    const isSuccess = currentRank >= requiredRank;
+
+
+    // State for the success modal
+
+    // REMOVED: const [hasShownSuccess, setHasShownSuccess] = React.useState(false);
+
+    // State for RLNC details modal
+    const [selectedStep, setSelectedStep] = React.useState<Step | null>(null);
+
+
+
 
     return (
         <div className="flex flex-col gap-4 h-full bg-slate-50/50">
+
+            <RLNCDetailModal
+                isOpen={!!selectedStep}
+                onClose={() => setSelectedStep(null)}
+                step={selectedStep}
+                isErased={selectedStep ? erasedIndices.has(selectedStep.stepIndex) : false}
+            />
+
+            {/* 0. Channel Noise Control */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-1">
+                <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${erasureRate > 0 ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+                        <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            {locale === 'zh' ? '信道噪声 (丢包率)' : 'Channel Noise'}
+                        </span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                        {erasureRate}%
+                    </span>
+                </div>
+
+                <div className="relative h-2 bg-slate-100 rounded-full mx-1">
+                    <div
+                        className="absolute h-full bg-rose-400 rounded-full transition-all duration-300"
+                        style={{ width: `${(erasureRate / 50) * 100}%` }}
+                    />
+                    <input
+                        type="range"
+                        min="0" max="50" step="5"
+                        value={erasureRate}
+                        onChange={(e) => setErasureRate(Number(e.target.value))}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div
+                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-rose-400 rounded-full pointer-events-none shadow-sm transition-all"
+                        style={{ left: `${(erasureRate / 50) * 100}%` }}
+                    />
+                </div>
+                <div className="flex justify-between mt-1 text-[8px] text-slate-300 font-mono px-0.5">
+                    <span>0% (Clean)</span>
+                    <span>50% (Heavy)</span>
+                </div>
+            </div>
 
             {/* 1. Decoding Status / Progress */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="font-bold text-slate-800 text-sm">{locale === 'zh' ? '解码进度' : 'Decoding Progress'}</h2>
-                        <span className="text-xs text-slate-400 font-mono">RANK: {currentRank}/{REQUIRED_RANK}</span>
+                        <span className="text-xs text-slate-400 font-mono">RANK: {currentRank}/{requiredRank}</span>
                     </div>
                     {isSuccess ? (
                         <div className="bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-bold">
@@ -95,9 +164,10 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({ visibleSteps, erasedIndices
                                     key={step.stepIndex}
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className={`relative p-3 rounded-xl border transition-all group ${isErased
-                                        ? 'bg-rose-50 border-rose-100 opacity-70 grayscale-[0.5]'
-                                        : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-sm'}`}
+                                    onClick={() => setSelectedStep(step)}
+                                    className={`relative p-3 rounded-xl border transition-all group cursor-pointer ${isErased
+                                        ? 'bg-rose-50 border-rose-100 opacity-70 grayscale-[0.5] hover:opacity-100'
+                                        : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]'}`}
                                 >
                                     <div className="flex items-start gap-3">
                                         {/* Icon Box */}

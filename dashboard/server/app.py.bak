@@ -113,7 +113,6 @@ class Session:
             base_url="https://api.deepseek.com"
         )
         self.model = "deepseek-chat"
-        self.evaluation_result = None # Store evaluation result
 
 sessions: Dict[str, Session] = {}
 
@@ -293,19 +292,15 @@ async def init_custom_session(req: CustomInitRequest):
 SAVED_SCENARIOS_DIR = PROJECT_ROOT / "dashboard/src/data/saved"
 SAVED_SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Removed duplicate SaveScenarioRequest
+class SaveScenarioRequest(BaseModel):
+    title: str
+    data: Dict # The full trajectory object
 
 @app.get("/api/scenarios")
 async def list_scenarios():
     scenarios = []
     # Saved Scenarios
-    files = list(SAVED_SCENARIOS_DIR.glob("*.json"))
-    # Sort by modification time, newest first
-    files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
-
-    scenarios = []
-    # Saved Scenarios
-    for file_path in files:
+    for file_path in SAVED_SCENARIOS_DIR.glob("*.json"):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -315,21 +310,22 @@ async def list_scenarios():
         except Exception as e:
             print(f"[ERROR] Failed to load scenario {file_path}: {e}")
     
+    # Sort by recent? For now just list.
     return scenarios
-
-class SaveScenarioRequest(BaseModel):
-    title: Any # str or dict
-    data: Dict
-    id: Optional[str] = None # Optional ID to overwrite
 
 @app.post("/api/save_scenario")
 async def save_scenario(req: SaveScenarioRequest):
     try:
-        scenario_id = req.id if req.id else str(uuid.uuid4())
+        scenario_id = str(uuid.uuid4())
         file_path = SAVED_SCENARIOS_DIR / f"{scenario_id}.json"
         
         scenario_data = req.data
         scenario_data["id"] = scenario_id
+        # Ensure title is localized object if not already, or just string
+        # The frontend expects {en:..., zh:...} for title usually.
+        # We will assume the frontend handles the title format or we force it here.
+        # But for "Rename", the user inputs a string. 
+        # Let's check mockData.ts structure: title: { en: string, zh: string }
         
         # If user provides a single string title, we wrap it
         if isinstance(req.title, str):
@@ -890,7 +886,6 @@ async def step_session(req: StepRequest):
     
 class EvaluateRequest(BaseModel):
     sessionId: str
-    language: Optional[str] = "en"  # "en" or "zh"
 
 @app.post("/api/evaluate")
 async def evaluate_session(req: EvaluateRequest):
@@ -899,11 +894,6 @@ async def evaluate_session(req: EvaluateRequest):
     
     sess = sessions[req.sessionId]
     
-    # Language Instruction
-    lang_instruction = "Reasoning must be in English."
-    if req.language == "zh":
-        lang_instruction = "请使用中文进行简要评价 (Reasoning must be in Chinese)."
-
     # helper to summarize trajectory
     def summarize_trajectory(traj):
         summary = ""
@@ -928,29 +918,17 @@ async def evaluate_session(req: EvaluateRequest):
     baseline_summary = summarize_trajectory(sess.baseline_state.trajectory)
     watermarked_summary = summarize_trajectory(sess.watermarked_state.trajectory)
     query = sess.watermarked_state.task.get("query", "Unknown Task")
-
-    # Anti-Bias: Randomize Order
-    import random
-    is_baseline_A = random.choice([True, False])
-
-    if is_baseline_A:
-        summary_A = baseline_summary
-        summary_B = watermarked_summary
-    else:
-        summary_A = watermarked_summary
-        summary_B = baseline_summary
     
     prompt = f"""Task: {query}
     
     Model A Trajectory/Answer:
-    {summary_A}
+    {baseline_summary}
 
     Model B Trajectory/Answer:
-    {summary_B}
+    {watermarked_summary}
 
     Please evaluate Model A and Model B based on the task using criteria such as correctness, efficiency, and helpfulness.
     Provide a score (0-10) for each and a brief reason.
-    {lang_instruction}
     
     You must output strictly in JSON format:
     {{
@@ -975,57 +953,14 @@ async def evaluate_session(req: EvaluateRequest):
             start = content.find("{")
             end = content.rfind("}")
             json_str = content[start:end+1]
-            raw_result = json.loads(json_str)
+            result = json.loads(json_str)
+        except:
+             result = {"model_a_score": 0, "model_b_score": 0, "reason": "Failed to parse judge output."}
 
-            # Map back to specific models
-            if is_baseline_A:
-                result = {
-                    "model_a_score": raw_result.get("model_a_score", 0),
-                    "model_b_score": raw_result.get("model_b_score", 0),
-                    "reason": raw_result.get("reason", "")
-                }
-            res_json = json.loads(json_str)
+        return result
 
-            swapped = not is_baseline_A
-            # map scores back to Baseline vs Ours
-            # If swapped (Model A was Watermarked), then A was Ours, B was Base.
-            # We want output: model_a_score=Base, model_b_score=Ours
-            final_result = {}
-            if swapped:
-                 final_result = {
-                     "model_a_score": res_json.get("model_b_score", 0), # A (now Base) = B (was Base)
-                     "model_b_score": res_json.get("model_a_score", 0), # B (now Ours) = A (was Ours)
-                     "reason": res_json.get("reason", "")
-                 }
-            else:
-                 final_result = res_json
-
-            sess.evaluation_result = final_result # Persist in session
-
-            # Attempt to update the original JSON file if it exists in SAVED_SCENARIOS_DIR
-            try:
-                original_id = sess.task.get("id")
-                if original_id:
-                    file_path = SAVED_SCENARIOS_DIR / f"{original_id}.json"
-                    if file_path.exists():
-                        with open(file_path, "r+", encoding="utf-8") as f:
-                            data = json.load(f)
-                            data["evaluation"] = final_result
-                            f.seek(0)
-                            json.dump(data, f, indent=2, ensure_ascii=False)
-                            f.truncate()
-                        print(f"[INFO] Updated evaluation for saved scenario {original_id}")
-            except Exception as save_err:
-                print(f"[WARN] Failed to auto-save evaluation to disk: {save_err}")
-
-            return final_result
-            
-        except Exception as e:
-            print("JSON Parse Error:", e)
-            return {"model_a_score": 0, "model_b_score": 0, "reason": "Failed to parse result"}
-            
     except Exception as e:
-        print("Evaluation Error:", e)
+        print(f"[ERROR] Evaluation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

@@ -141,7 +141,7 @@ class ToolBenchRetriever:
         if not self.model:
             self.load_model()
             
-        if not self.corpus_embeddings and self.model:
+        if self.corpus_embeddings is None and self.model:
             self.index_tools()
             
         if not self.model or self.corpus_embeddings is None:
