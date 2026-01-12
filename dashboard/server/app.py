@@ -149,7 +149,8 @@ def build_messages(query: str, tool_summaries: List[str], admissible_commands: L
 You have access to the following tools:
 {json.dumps(tool_summaries, indent=2)}
 
-You must respond in JSON format with 'thought', 'action', and 'action_args'.
+You must respond in JSON format with 'thought', 'action', 'action_args', and 'action_weights'.
+'action_weights' must be a JSON object mapping EVERY valid action to a non-negative number (not necessarily normalized; the server will normalize them to sum to 1).
 Valid actions are: {json.dumps(admissible_commands)}
 If you have enough information, use "Finish" and provide the final answer in "action_args" as {{"final_answer": "your answer"}}.
 """
@@ -159,33 +160,77 @@ If you have enough information, use "Finish" and provide the final answer in "ac
     ]
 
 def extract_and_normalize_probabilities(output: str, candidates: List[str]) -> Dict[str, float]:
-    # DeepSeek doesn't expose logprobs via API easily for chat? 
-    # Current API might not support top_logprobs for all models.
-    # We will simulate probabilities based on text semantic matching or just uniform for demo if API fails.
-    # For a REAL watermark, we need access to logprobs of the next token(s).
-    # Since we are using an external API that might not give logprobs, 
-    # we will SIMULATE the "Probability Decomposition" visualization 
-    # by assigning pseudo-probabilities to the admissible commands based on the LLM's text output confidence 
-    # (or just random/uniform + bias towards the chosen action).
-    
-    # 1. Identify chosen action from text (fast parse)
-    chosen = "Finish"
-    try:
-        data = json.loads(output[output.find("{"):output.rfind("}")+1])
-        chosen = data.get("action", "Finish")
-    except:
-        pass
-        
-    scores = {}
-    for c in candidates:
-        if c == chosen:
-            scores[c] = 0.95
-        else:
-            scores[c] = 0.05 / (len(candidates) - 1) if len(candidates) > 1 else 0
-            
-    return scores
+    # DeepSeek chat API doesn't expose logprobs in this demo.
+    # We therefore:
+    #   1) Prefer model-provided `action_weights` if present (normalized).
+    #   2) Otherwise, fall back to a biased-but-non-degenerate distribution (multiple "steps"),
+    #      to avoid the "one huge + many identical tiny" shape that collapses bins in the UI.
 
-    return scores
+    if not candidates:
+        return {}
+    if len(candidates) == 1:
+        return {candidates[0]: 1.0}
+
+    def _parse_json_payload(text: str) -> Optional[Dict]:
+        try:
+            start = text.find("{")
+            end = text.rfind("}")
+            if start == -1 or end == -1 or end <= start:
+                return None
+            return json.loads(text[start : end + 1])
+        except Exception:
+            return None
+
+    def _coerce_nonneg_float(value) -> float:
+        try:
+            v = float(value)
+        except Exception:
+            return 0.0
+        if not (v == v) or v == float("inf") or v == float("-inf"):
+            return 0.0
+        return v if v > 0.0 else 0.0
+
+    data = _parse_json_payload(output) or {}
+    chosen = data.get("action", "Finish")
+
+    raw_weights = data.get("action_weights", None)
+    if raw_weights is not None:
+        weights: Dict[str, float] = {}
+
+        if isinstance(raw_weights, dict):
+            for c in candidates:
+                weights[c] = _coerce_nonneg_float(raw_weights.get(c, 0.0))
+        elif isinstance(raw_weights, list) and len(raw_weights) == len(candidates):
+            for i, c in enumerate(candidates):
+                weights[c] = _coerce_nonneg_float(raw_weights[i])
+        else:
+            weights = {}
+
+        total = sum(weights.values())
+        if total > 0.0:
+            return {k: v / total for k, v in weights.items()}
+
+    # Fallback: keep the chosen action high, but give the rest a geometric decay so p2>p3>... (no flat plateau).
+    if chosen in candidates:
+        top_mass = 0.4
+        others = [c for c in candidates if c != chosen]
+        ratio = 0.75
+        denom = sum((ratio**i) for i in range(len(others)))
+        if denom <= 0.0:
+            return uniform_prob(candidates)
+
+        remainder = 1.0 - top_mass
+        scores = {chosen: top_mass}
+        for i, c in enumerate(others):
+            scores[c] = remainder * (ratio**i) / denom
+        return scores
+
+    # If we couldn't identify a valid chosen action, still return a multi-step distribution (deterministic by order).
+    ratio = 0.75
+    denom = sum((ratio**i) for i in range(len(candidates)))
+    if denom <= 0.0:
+        return uniform_prob(candidates)
+    return {c: (ratio**i) / denom for i, c in enumerate(candidates)}
 
 @app.post("/api/init")
 async def init_session(req: InitRequest):
