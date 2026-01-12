@@ -106,6 +106,18 @@ conda activate AgentMark
 pip install -r requirements.txt
 ```
 
+**适用于 Dashboard 前端界面**
+
+- **Node.js**: 18.0+
+- **NPM**: 随 Node.js 安装
+
+```bash
+# Dashboard 前端启动
+cd dashboard
+npm install
+npm run dev
+```
+
 ### 2. 数据集配置
 
 #### ToolBench
