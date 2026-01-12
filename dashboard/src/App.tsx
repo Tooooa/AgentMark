@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import MainLayout from './components/layout/MainLayout';
 import ControlPanel from './components/controls/ControlPanel';
@@ -11,10 +11,10 @@ import SettingsModal from './components/modals/SettingsModal';
 import EvaluationModal from './components/execution/EvaluationModal';
 import { useSimulation } from './hooks/useSimulation';
 import { I18nProvider, useI18n } from './i18n/I18nContext';
-import { api } from './services/api';
 
 function AppContent() {
   const { locale } = useI18n();
+  const [searchQuery, setSearchQuery] = useState('');
   
   const {
     scenarios,
@@ -70,6 +70,19 @@ function AppContent() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isFirstEntry, setIsFirstEntry] = useState(true);
 
+  // Filter scenarios based on search query
+  const filteredScenarios = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return scenarios;
+    }
+    const query = searchQuery.toLowerCase();
+    return scenarios.filter(scenario => {
+      const titleEn = scenario.title.en?.toLowerCase() || '';
+      const titleZh = scenario.title.zh?.toLowerCase() || '';
+      const userQuery = scenario.userQuery?.toLowerCase() || '';
+      return titleEn.includes(query) || titleZh.includes(query) || userQuery.includes(query);
+    });
+  }, [scenarios, searchQuery]);
 
   // NOTE: targetPayload is now redundant if we use hook's payload?
   // But DecoderPanel uses it. Let's keep using hook's payload for consistency
@@ -77,43 +90,16 @@ function AppContent() {
   // Actually, let's just use the hook's payload directly for DecoderPanel too, 
   // but DecoderPanel prop is 'targetPayload'.
 
-  const handleStart = async (config: { scenarioId: string; payload: string; erasureRate: number; query?: string }) => {
-    setPayload(config.payload);
-    setErasureRate(config.erasureRate);
-    
-    // If it's a new conversation (has query), create it immediately
+  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number; query?: string }) => {
+    setActiveScenarioId(config.scenarioId);
     if (config.query) {
       setCustomQuery(config.query);
-      
-      // Create new conversation in database
-      const newSessionId = `sess_${Date.now()}_new`;
-      const titlePreview = config.query.length > 30 ? config.query.substring(0, 30) + '...' : config.query;
-      
-      try {
-        await api.saveScenario(
-          { en: titlePreview, zh: titlePreview },
-          {
-            id: newSessionId,
-            title: { en: titlePreview, zh: titlePreview },
-            taskName: "New Chat",
-            userQuery: config.query,
-            totalSteps: 0,
-            steps: []
-          },
-          newSessionId
-        );
-        
-        await refreshScenarios();
-        setActiveScenarioId(newSessionId);
-      } catch (e) {
-        console.error("Failed to create conversation", e);
-        setActiveScenarioId(config.scenarioId);
-      }
     } else {
-      setCustomQuery("");
-      setActiveScenarioId(config.scenarioId);
+      setCustomQuery(""); // Reset if not custom
     }
-    
+    setPayload(config.payload); // Sync to hook
+    setErasureRate(config.erasureRate);
+    // Note: setHasStarted logic will trigger the effect below
     setHasStarted(true);
   };
 
@@ -124,7 +110,7 @@ function AppContent() {
     // setHasStarted(false); // REMOVED
   }, [startNewConversation]);
 
-  // 初次进入主页面时自动弹出设置窗口
+  // 鍒濇杩涘叆涓婚〉闈㈡椂鑷姩寮瑰嚭璁剧疆绐楀彛
   useEffect(() => {
     if (hasStarted && isFirstEntry) {
       setIsSettingsModalOpen(true);
@@ -200,85 +186,6 @@ function AppContent() {
             key="welcome"
             onStart={handleStart}
             initialScenarioId={activeScenarioId}
-            initialErasureRate={erasureRate}
-            isLiveMode={isLiveMode}
-            onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-          />
-        ) : (
-          <motion.div
-            key="dashboard"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="h-screen overflow-hidden"
-          >
-            {isComparisonMode ? (
-              // Comparison Mode Layout
-              <div className="h-full p-4 grid grid-cols-[340px_1fr] gap-6 overflow-hidden max-w-[1920px] mx-auto">
-                <div className="h-full overflow-hidden">
-                  {commonControlPanel}
-                </div>
-                <div className="h-full overflow-hidden">
-                  <ComparisonView
-                    visibleSteps={visibleSteps}
-                    erasedIndices={erasedIndices}
-                    scenarioId={activeScenario.id}
-                    evaluationResult={evaluationResult}
-                  />
-                </div>
-              </div>
-            ) : (
-              // Standard Dashboard Layout
-              <MainLayout
-                left={commonControlPanel}
-                middle={
-                  <FlowFeed
-                    visibleSteps={visibleSteps}
-                    erasedIndices={erasedIndices}
-                    userQuery={activeScenario.userQuery}
-                    onContinue={handleContinue}
-                    isPlaying={isPlaying}
-                    onTogglePlay={() => setIsPlaying(!isPlaying)}
-                    scenarioId={activeScenario.id}
-                  />
-                }
-                right={
-                  <DecoderPanel
-                    visibleSteps={visibleSteps}
-                    erasedIndices={erasedIndices}
-                    targetPayload={payload}
-                    erasureRate={erasureRate}
-                    setErasureRate={setErasureRate}
-                  />
-                }
-                onHome={async () => {
-                  // Save current conversation before going home
-                  if (isLiveMode && activeScenario && activeScenario.steps.length > 0 && sessionId) {
-                    try {
-                      await handleNewConversation();
-                    } catch (e) {
-                      console.error("Failed to save before home", e);
-                    }
-                  }
-                  setHasStarted(false);
-                  handleReset();
-                }}
-              />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    <I18nProvider>
-      <div className="bg-slate-50 min-h-screen">
-        <AnimatePresence mode='wait'>
-          {!hasStarted ? (
-            <WelcomeScreen
-              key="welcome"
-              onStart={handleStart}
-              initialScenarioId={activeScenarioId}
               initialErasureRate={erasureRate}
               isLiveMode={isLiveMode}
               onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
@@ -358,145 +265,119 @@ function AppContent() {
           onInitSession={handleInitSession}
         />
 
-      <SaveScenarioModal
-        isOpen={isSaveModalOpen}
-        onClose={() => setIsSaveModalOpen(false)}
-        scenarioData={activeScenario}
-        onSaved={() => {
-          refreshScenarios();
-          // Optional: maybe confirm to user
-        }}
-      />
+        <SaveScenarioModal
+          isOpen={isSaveModalOpen}
+          onClose={() => setIsSaveModalOpen(false)}
+          scenarioData={activeScenario}
+          onSaved={() => {
+            refreshScenarios();
+            // Optional: maybe confirm to user
+          }}
+        />
 
-      <EvaluationModal
-        isOpen={isEvaluationModalOpen}
-        onClose={() => setIsEvaluationModalOpen(false)}
-        result={evaluationResult}
-        isLoading={isEvaluating}
-      />
-      
-      {/* Full Screen History View */}
-      {isHistoryViewOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden"
-          >
-            {/* Header */}
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-800">
-                {locale === 'zh' ? '全部历史记录' : 'All History'}
-              </h2>
-              <button
-                onClick={() => setIsHistoryViewOpen(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Search Box */}
-            <div className="px-6 pt-4 pb-2">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder={locale === 'zh' ? '搜索对话...' : 'Search conversations...'}
-                  className="w-full px-4 py-3 pl-12 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
-                  onChange={(e) => {
-                    const searchTerm = e.target.value.toLowerCase();
-                    const historyGrid = e.target.closest('.bg-white')?.querySelector('.grid');
-                    if (historyGrid) {
-                      const items = historyGrid.querySelectorAll('button');
-                      items.forEach((item: any) => {
-                        const text = item.textContent?.toLowerCase() || '';
-                        item.style.display = text.includes(searchTerm) ? '' : 'none';
-                      });
-                    }
-                  }}
-                />
-                <svg className="w-5 h-5 absolute left-4 top-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        <EvaluationModal
+          isOpen={isEvaluationModalOpen}
+          onClose={() => setIsEvaluationModalOpen(false)}
+          result={evaluationResult}
+          isLoading={isEvaluating}
+        />
+
+        {/* Full Screen History View Modal */}
+        {isHistoryViewOpen && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[80vh] flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {locale === 'zh' ? '历史记录' : 'History'}
+                </h2>
+                <button
+                  onClick={() => setIsHistoryViewOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title={locale === 'zh' ? '关闭' : 'Close'}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-            </div>
-            
-            {/* History List */}
-            <div className="flex-1 overflow-y-auto p-6 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {scenarios.map((s) => {
-                  const timestampMatch = s.id.match(/sess_(\d+)_/);
-                  let timeStr = '';
-                  if (timestampMatch) {
-                    const timestamp = parseInt(timestampMatch[1]) * 1000;
-                    const date = new Date(timestamp);
-                    timeStr = date.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US');
-                  }
-                  
-                  return (
-                    <button
-                      key={s.id}
+
+              {/* Search Bar */}
+              <div className="px-6 pt-4 pb-2">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={locale === 'zh' ? '搜索对话...' : 'Search conversations...'}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <svg 
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredScenarios.map((scenario) => (
+                    <div
+                      key={scenario.id}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-lg ${
+                        scenario.id === activeScenarioId
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-300'
+                      }`}
                       onClick={() => {
-                        setActiveScenarioId(s.id);
+                        setActiveScenarioId(scenario.id);
                         setIsHistoryViewOpen(false);
                       }}
-                      className={`p-4 rounded-xl border-2 transition-all text-left ${
-                        activeScenarioId === s.id
-                          ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
-                      }`}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="font-semibold text-slate-800 line-clamp-2">
-                          {locale === 'zh' ? (s.title.zh || s.title.en) : s.title.en}
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-gray-800 flex-1 line-clamp-2">
+                          {locale === 'zh' ? scenario.title.zh : scenario.title.en}
                         </h3>
-                        {deleteScenario && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(locale === 'zh' ? '确定要删除这条对话吗？' : 'Delete this conversation?')) {
-                                deleteScenario(s.id);
-                              }
-                            }}
-                            className="p-1 hover:bg-red-50 rounded transition-all flex-shrink-0"
-                          >
-                            <svg className="w-4 h-4 text-slate-400 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(locale === 'zh' ? '确定要删除这条记录吗？' : 'Delete this conversation?')) {
+                              deleteScenario(scenario.id);
+                            }
+                          }}
+                          className="ml-2 p-1 hover:bg-red-50 rounded transition-colors"
+                          title={locale === 'zh' ? '删除' : 'Delete'}
+                        >
+                          <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
-                      <p className="text-sm text-slate-500 line-clamp-2 mb-2">
-                        {s.userQuery || (locale === 'zh' ? '暂无内容' : 'No content')}
+                      <p className="text-sm text-gray-500 line-clamp-2 mb-2">
+                        {scenario.userQuery || (locale === 'zh' ? '暂无内容' : 'No content')}
                       </p>
-                      <div className="flex items-center gap-3 text-xs text-slate-400">
-                        <span>{s.steps.length} turns</span>
-                        {timeStr && (
-                          <>
-                            <span>•</span>
-                            <span>{timeStr}</span>
-                          </>
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span>{scenario.totalSteps} {locale === 'zh' ? '步' : 'steps'}</span>
+                        {scenario.id === activeScenarioId && (
+                          <span className="text-blue-500 font-medium">
+                            {locale === 'zh' ? '当前' : 'Active'}
+                          </span>
                         )}
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-              
-              {scenarios.length === 0 && (
-                <div className="text-center py-12 text-slate-400">
-                  {locale === 'zh' ? '暂无历史记录' : 'No history yet'}
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
-          </motion.div>
-        </div>
-      )}
-    </div>
-  );
+          </div>
+        )}
+      </div>
+    );
 }
 
 function App() {
