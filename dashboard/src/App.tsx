@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import MainLayout from './components/layout/MainLayout';
 import ControlPanel from './components/controls/ControlPanel';
@@ -77,12 +77,12 @@ function App() {
     setHasStarted(true);
   };
 
-  const handleNewConversation = async () => {
+  const handleNewConversation = useCallback(async () => {
     // 1. Auto-Save & Reset via Hook
     await startNewConversation();
     // 2. Stay on Dashboard (do not reset hasStarted)
     // setHasStarted(false); // REMOVED
-  };
+  }, [startNewConversation]);
 
   // Auto-Start Effect for Custom Queries
   useEffect(() => {
@@ -91,21 +91,22 @@ function App() {
     }
   }, [hasStarted, isLiveMode, customQuery, sessionId, handleInitSession]);
 
-  // Stats Calculation
-  let liveStats = undefined;
-  if (activeScenario && activeScenario.steps.length > 0) {
-    const metricsSteps = activeScenario.steps.filter(s => s.metrics);
-    if (metricsSteps.length > 0) {
-      const totalLat = metricsSteps.reduce((sum, s) => sum + (s.metrics?.latency || 0), 0);
-      const totalTok = metricsSteps.reduce((sum, s) => sum + (s.metrics?.tokens || 0), 0);
-      // Latency in ms (from seconds)
-      // Tokens/sec = totalTokens / totalTime
-      liveStats = {
-        avgLatency: parseFloat((totalLat * 1000 / metricsSteps.length).toFixed(2)),
-        avgTokens: totalLat > 0 ? parseFloat((totalTok / totalLat).toFixed(0)) : 0
-      };
+  const liveStats = useMemo(() => {
+    if (activeScenario && activeScenario.steps.length > 0) {
+      const metricsSteps = activeScenario.steps.filter(s => s.metrics);
+      if (metricsSteps.length > 0) {
+        const totalLat = metricsSteps.reduce((sum, s) => sum + (s.metrics?.latency || 0), 0);
+        const totalTok = metricsSteps.reduce((sum, s) => sum + (s.metrics?.tokens || 0), 0);
+        // Latency in ms (from seconds)
+        // Tokens/sec = totalTokens / totalTime
+        return {
+          avgLatency: parseFloat((totalLat * 1000 / metricsSteps.length).toFixed(2)),
+          avgTokens: totalLat > 0 ? parseFloat((totalTok / totalLat).toFixed(0)) : 0
+        };
+      }
     }
-  }
+    return undefined;
+  }, [activeScenario]);
 
   const commonControlPanel = (
     <ControlPanel

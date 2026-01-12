@@ -29,7 +29,37 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
     const containerRef = useRef<HTMLDivElement>(null);
 
     // --- Data Preparation ---
-    const sortedDist = [...step.distribution].sort((a, b) => b.prob - a.prob);
+    const { sortedDist, decompositionData, binsData } = React.useMemo(() => {
+        const sorted = [...step.distribution].sort((a, b) => b.prob - a.prob);
+
+        const bins = sorted.map((d, k) => { // k is 0-indexed here (Rank k+1)
+            const nextProb = sorted[k + 1]?.prob || 0;
+            const diff = d.prob - nextProb;
+
+            if (diff <= 0.000001) return null; // Skip empty bins
+
+            const binObj: any = {
+                name: `T_${k + 1}`,
+                totalWeight: (k + 1) * diff,
+                k: k + 1,
+                isTarget: d.isSelected,
+            };
+
+            // Add stacking components
+            // For j=0 to k: component "Action_{j+1}" = diff
+            for (let j = 0; j <= k; j++) {
+                binObj[`Action_${j + 1}`] = diff;
+            }
+
+            return binObj;
+        }).filter(b => b !== null);
+
+        return {
+            sortedDist: sorted,
+            decompositionData: sorted,
+            binsData: bins
+        };
+    }, [step]);
 
     // Reset and start animation when opened
     useEffect(() => {
@@ -59,32 +89,6 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
         setVisibleLayers(0);
         setIsAnimating(true);
     };
-
-    // 1. Decomposition Data (Left Chart)
-    const decompositionData = sortedDist;
-
-    // 2. Recombination Data (Right Chart - Stacked)
-    const binsData = sortedDist.map((d, k) => { // k is 0-indexed here (Rank k+1)
-        const nextProb = sortedDist[k + 1]?.prob || 0;
-        const diff = d.prob - nextProb;
-
-        if (diff <= 0.000001) return null; // Skip empty bins
-
-        const binObj: any = {
-            name: `T_${k + 1}`,
-            totalWeight: (k + 1) * diff,
-            k: k + 1,
-            isTarget: d.isSelected,
-        };
-
-        // Add stacking components
-        // For j=0 to k: component "Action_{j+1}" = diff
-        for (let j = 0; j <= k; j++) {
-            binObj[`Action_${j + 1}`] = diff;
-        }
-
-        return binObj;
-    }).filter(b => b !== null);
 
     // Colors for Ranks (Stack layers)
     const getRankColor = (rankIndex: number) => {
@@ -192,7 +196,7 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                     {mode === 'watermarked' ? t('probDecomp') : t('probDist')}
                                 </h3>
                                 <div className="flex-1 relative">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="99%" height="100%">
                                         <BarChart data={decompositionData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                             <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
@@ -235,7 +239,7 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                             )}
                                         </h3>
                                         <div className="flex-1 relative">
-                                            <ResponsiveContainer width="100%" height="100%">
+                                            <ResponsiveContainer width="99%" height="100%">
                                                 <BarChart data={binsData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                     <XAxis dataKey="name" />

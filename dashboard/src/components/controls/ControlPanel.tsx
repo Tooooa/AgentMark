@@ -65,16 +65,20 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
     const activeScenario = currentScenario || scenarios.find(s => s.id === activeScenarioId);
 
-    const chartData = activeScenario?.steps.map(s => ({
-        step: s.stepIndex,
-        tokens: s.metrics?.tokens ?? null,
-        latency: s.metrics?.latency ?? null,
-        baseTokens: s.baseline?.metrics?.tokens ?? null,
-        baseLatency: s.baseline?.metrics?.latency ?? null
-    })) || [];
-    if (chartData.length === 0) {
-        chartData.push({ step: 0, tokens: null, latency: null, baseTokens: null, baseLatency: null });
-    }
+    const chartData = React.useMemo(() => {
+        const data = activeScenario?.steps.map(s => ({
+            step: s.stepIndex,
+            tokens: s.metrics?.tokens ?? null,
+            latency: s.metrics?.latency ?? null,
+            baseTokens: s.baseline?.metrics?.tokens ?? null,
+            baseLatency: s.baseline?.metrics?.latency ?? null
+        })) || [];
+
+        if (data.length === 0) {
+            data.push({ step: 0, tokens: null, latency: null, baseTokens: null, baseLatency: null });
+        }
+        return data;
+    }, [activeScenario]);
 
     // -- Live Mode Layout -- 
     if (isLiveMode) {
@@ -218,13 +222,18 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                                         <span className="flex items-center gap-0.5 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> Base</span>
                                     </div>
                                 </div>
-                                <div className="flex-1 w-full min-h-0">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                <div className="flex-1 w-full min-h-0 overflow-hidden relative">
+                                    <ResponsiveContainer width="99%" height="100%" debounce={50}>
                                         <LineChart data={chartData}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                             <XAxis dataKey="step" hide />
                                             <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
-                                            <Tooltip contentStyle={{ fontSize: '10px' }} itemStyle={{ padding: 0 }} />
+                                            <Tooltip 
+                                                contentStyle={{ fontSize: '10px' }} 
+                                                itemStyle={{ padding: 0 }}
+                                                wrapperStyle={{ zIndex: 1000 }}
+                                                isAnimationActive={false}
+                                            />
                                             <Line type="monotone" dataKey="baseTokens" stroke="#cbd5e1" strokeWidth={2} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
                                             <Line type="monotone" dataKey="tokens" stroke="#6366f1" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} isAnimationActive={false} />
                                         </LineChart>
@@ -241,13 +250,18 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                                         <span className="flex items-center gap-0.5 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> Base</span>
                                     </div>
                                 </div>
-                                <div className="flex-1 w-full min-h-0">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                <div className="flex-1 w-full min-h-0 overflow-hidden relative">
+                                    <ResponsiveContainer width="99%" height="100%" debounce={50}>
                                         <LineChart data={chartData}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                             <XAxis dataKey="step" hide />
                                             <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
-                                            <Tooltip contentStyle={{ fontSize: '10px' }} itemStyle={{ padding: 0 }} />
+                                            <Tooltip 
+                                                contentStyle={{ fontSize: '10px' }} 
+                                                itemStyle={{ padding: 0 }}
+                                                wrapperStyle={{ zIndex: 1000 }}
+                                                isAnimationActive={false}
+                                            />
                                             <Line type="monotone" dataKey="baseLatency" stroke="#cbd5e1" strokeWidth={2} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
                                             <Line type="monotone" dataKey="latency" stroke="#f43f5e" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} isAnimationActive={false} />
                                         </LineChart>
@@ -281,7 +295,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                         </div>
                     </div>
                     <div className="h-32">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="99%" height="100%" debounce={50}>
                             <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="step" hide />
@@ -289,6 +303,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                                 <Tooltip
                                     contentStyle={{ fontSize: '10px', borderRadius: '8px' }}
                                     itemStyle={{ padding: 0 }}
+                                    wrapperStyle={{ zIndex: 1000 }}
+                                    isAnimationActive={false}
                                 />
                                 <Line
                                     type="monotone"
@@ -324,7 +340,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                         </div>
                     </div>
                     <div className="h-32">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="99%" height="100%" debounce={50}>
                             <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="step" hide />
@@ -332,6 +348,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                                 <Tooltip
                                     contentStyle={{ fontSize: '10px', borderRadius: '8px' }}
                                     itemStyle={{ padding: 0 }}
+                                    wrapperStyle={{ zIndex: 1000 }}
+                                    isAnimationActive={false}
                                 />
                                 <Line
                                     type="monotone"

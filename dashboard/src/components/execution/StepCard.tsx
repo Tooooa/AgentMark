@@ -31,6 +31,21 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
     const { t } = useI18n();
     const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+    const { sortedDistribution, bins } = React.useMemo(() => {
+        const sorted = [...step.distribution].sort((a, b) => b.prob - a.prob);
+
+        const b = sorted.map((d, i) => {
+            const nextProb = sorted[i + 1]?.prob || 0;
+            return {
+                name: `T_${i + 1}`,
+                weight: (i + 1) * (d.prob - nextProb),
+                isTarget: d.isSelected
+            };
+        }).filter(item => item.weight > 0.001);
+
+        return { sortedDistribution: sorted, bins: b };
+    }, [step.distribution]);
+
     if (isErased) {
         return (
             <motion.div
@@ -142,15 +157,15 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                                 <div className="h-28 flex gap-3 items-center bg-slate-50/50 rounded-xl p-2 border border-slate-100">
                                     {/* Chart 1 */}
                                     <div className="flex-1 h-full relative">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={[...step.distribution].sort((a, b) => b.prob - a.prob)}>
+                                        <ResponsiveContainer width="99%" height="100%">
+                                            <BarChart data={sortedDistribution}>
                                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
                                                 {/* Slicing Lines */}
-                                                {[...step.distribution].sort((a, b) => b.prob - a.prob).map((d, i) => (
+                                                {sortedDistribution.map((d, i) => (
                                                     <ReferenceLine key={`line-${i}`} y={d.prob} stroke="#cbd5e1" strokeDasharray="3 3" />
                                                 ))}
                                                 <Bar dataKey="prob" radius={[2, 2, 0, 0]}>
-                                                    {[...step.distribution].sort((a, b) => b.prob - a.prob).map((entry, index) => (
+                                                    {sortedDistribution.map((entry, index) => (
                                                         <Cell key={`c-${index}`} fill={entry.isSelected ? '#818cf8' : '#e2e8f0'} />
                                                     ))}
                                                 </Bar>
@@ -161,35 +176,21 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                                     <ArrowRight size={12} className="text-slate-300" />
 
                                     {/* Chart 2: Bins */}
-                                    {(() => {
-                                        const sortedDist = [...step.distribution].sort((a, b) => b.prob - a.prob);
-                                        const bins = sortedDist.map((d, i) => {
-                                            const nextProb = sortedDist[i + 1]?.prob || 0;
-                                            return {
-                                                name: `T_${i + 1}`,
-                                                weight: (i + 1) * (d.prob - nextProb),
-                                                isTarget: d.isSelected
-                                            };
-                                        }).filter(b => b.weight > 0.001);
-
-                                        return (
-                                            <div className="flex-1 h-full relative">
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <BarChart data={bins}>
-                                                        <Tooltip cursor={{ fill: 'transparent' }} content={() => null} />
-                                                        <Bar dataKey="weight" radius={[2, 2, 0, 0]}>
-                                                            {bins.map((e, idx) => (
-                                                                <Cell key={`b-${idx}`} fill={e.isTarget ? (showWatermarkDetails ? '#6366f1' : '#f59e0b') : '#cbd5e1'} />
-                                                            ))}
-                                                        </Bar>
-                                                    </BarChart>
-                                                </ResponsiveContainer>
-                                                <button onClick={() => setIsDetailOpen(true)} className="absolute top-0 right-0 p-1 hover:bg-white rounded shadow-sm transition-colors text-indigo-500">
-                                                    <RotateCcw size={10} />
-                                                </button>
-                                            </div>
-                                        );
-                                    })()}
+                                    <div className="flex-1 h-full relative">
+                                        <ResponsiveContainer width="99%" height="100%">
+                                            <BarChart data={bins}>
+                                                <Tooltip cursor={{ fill: 'transparent' }} content={() => null} />
+                                                <Bar dataKey="weight" radius={[2, 2, 0, 0]}>
+                                                    {bins.map((e, idx) => (
+                                                        <Cell key={`b-${idx}`} fill={e.isTarget ? (showWatermarkDetails ? '#6366f1' : '#f59e0b') : '#cbd5e1'} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                        <button onClick={() => setIsDetailOpen(true)} className="absolute top-0 right-0 p-1 hover:bg-white rounded shadow-sm transition-colors text-indigo-500">
+                                            <RotateCcw size={10} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Pipeline Footer */}
