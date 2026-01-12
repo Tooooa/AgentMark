@@ -8,7 +8,7 @@ import { api } from '../services/api';
 export const useSimulation = () => {
     // Static State
     const [savedScenarios, setSavedScenarios] = useState<Trajectory[]>([]);
-    const [activeScenarioId, setActiveScenarioId] = useState<string>(scenarios[0].id);
+    const [activeScenarioId, setActiveScenarioId] = useState<string>('default');
     const [customQuery, setCustomQuery] = useState<string>("");
     const [payload, setPayload] = useState<string>("1101"); // Default binary string
 
@@ -30,6 +30,9 @@ export const useSimulation = () => {
     const [evaluationResult, setEvaluationResult] = useState<{ model_a_score: number, model_b_score: number, reason: string } | null>(null);
     const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
 
+    // History View State
+    const [isHistoryViewOpen, setIsHistoryViewOpen] = useState(false);
+
 
     // Refresh saved scenarios
     const refreshScenarios = useCallback(async () => {
@@ -47,31 +50,52 @@ export const useSimulation = () => {
     }, [refreshScenarios]);
 
     const allScenarios = useMemo(() => {
+        // Always merge saved scenarios with mock scenarios
+        // Saved scenarios (real history) come first
         const savedMap = new Map(savedScenarios.map(s => [s.id, s]));
         const merged = [...savedScenarios];
 
-        // Add static scenarios only if not present in saved (by ID)
-        scenarios.forEach(s => {
-            if (!savedMap.has(s.id)) {
-                merged.push(s);
-            }
-        });
+        // Add mock scenarios only if not present in saved (by ID)
+        // and only in non-live mode
+        if (!isLiveMode) {
+            scenarios.forEach(s => {
+                if (!savedMap.has(s.id)) {
+                    merged.push(s);
+                }
+            });
+        }
 
-        // Sort optional? or keep order: Saved (Recent) -> Mock (Static).
-        // Sidebar usually expects them mixed or sorted. 
-        // For now, Saved first, then remaining Mocks.
         return merged;
-    }, [savedScenarios]);
+    }, [savedScenarios, isLiveMode]);
 
     // Derived Active Scenario
     const activeScenario = useMemo(() => {
-        if (isLiveMode && liveScenario) {
-            if (!sessionId || activeScenarioId === sessionId) {
-                return liveScenario;
-            }
+        // Priority 1: If we have a liveScenario and it matches activeScenarioId, use it
+        if (isLiveMode && liveScenario && liveScenario.id === activeScenarioId) {
+            return liveScenario;
         }
-        return allScenarios.find(s => s.id === activeScenarioId) || allScenarios[0];
-    }, [activeScenarioId, isLiveMode, liveScenario, allScenarios, sessionId]);
+        
+        // Priority 2: Find in allScenarios (includes saved scenarios)
+        const found = allScenarios.find(s => s.id === activeScenarioId);
+        if (found) {
+            return found;
+        }
+        
+        // Priority 3: If we have a liveScenario but ID doesn't match, still use it (current session)
+        if (isLiveMode && liveScenario) {
+            return liveScenario;
+        }
+        
+        // Fallback: First scenario or default
+        return allScenarios[0] || {
+            id: 'default',
+            title: { en: 'Default', zh: '默认' },
+            taskName: 'Default',
+            userQuery: '',
+            totalSteps: 0,
+            steps: []
+        };
+    }, [activeScenarioId, isLiveMode, liveScenario, allScenarios]);
 
     // Sync evaluation result when active scenario changes
     useEffect(() => {
@@ -83,6 +107,39 @@ export const useSimulation = () => {
         setIsEvaluationModalOpen(false);
     }, [activeScenarioId, activeScenario]); // Re-run if scenario content updates (e.g. after eval)
 
+    // Auto-load history when clicking on a saved scenario
+    useEffect(() => {
+        const loadHistoryScenario = async () => {
+            // Check if user clicked on a saved scenario (not current live session)
+            const clickedScenario = savedScenarios.find(s => s.id === activeScenarioId);
+            
+            if (isLiveMode && clickedScenario && clickedScenario.steps.length > 0) {
+                // Check if it's different from current liveScenario
+                if (!liveScenario || liveScenario.id !== activeScenarioId) {
+                    // Load the scenario into view with correct ID
+                    setLiveScenario({
+                        ...clickedScenario,
+                        id: activeScenarioId // Ensure ID matches
+                    });
+                    setCurrentStepIndex(clickedScenario.steps.length);
+                    setIsPlaying(false);
+                    
+                    // Set sessionId to match the clicked scenario
+                    // This allows continuing the conversation
+                    setSessionId(activeScenarioId);
+                    
+                    // Load evaluation result if exists
+                    if (clickedScenario.evaluation) {
+                        setEvaluationResult(clickedScenario.evaluation);
+                    } else {
+                        setEvaluationResult(null);
+                    }
+                }
+            }
+        };
+        
+        loadHistoryScenario();
+    }, [activeScenarioId, savedScenarios, isLiveMode]);
 
     const timerRef = useRef<number | null>(null);
 
@@ -388,35 +445,51 @@ export const useSimulation = () => {
         payload,
         setPayload,
         sessionId,
+        
+        // History View
+        isHistoryViewOpen,
+        setIsHistoryViewOpen,
 
 
         handleContinue: async (prompt: string) => {
-            // Case 0: New Session (No Session ID yet)
+            // Case 0: New Session (No Session ID yet - either from welcome page or "New Chat")
             if (!sessionId && isLiveMode) {
                 // Initialize Session with this prompt as the custom query
                 setIsLoading(true);
                 setCustomQuery(prompt);
                 try {
-                    // We need to call API to init
-                    // But handleInitSession depends on state that might not be set yet if we just call it.
-                    // Let's call API directly or set state and call handleInitSession?
-                    // handleInitSession reads customQuery from state.
-                    // So we set it, but state update is async.
-                    // Better to duplicate init logic or extract it.
-                    // Let's call api directly.
-
                     const data = await api.initCustomSession(apiKey, prompt, payload);
 
-                    setSessionId(data.sessionId);
-                    setActiveScenarioId(data.sessionId);
-                    setLiveScenario({
-                        id: data.task.id,
-                        title: { en: "Live Session", zh: "实时会话" },
+                    const newSessionId = data.sessionId;
+                    setSessionId(newSessionId);
+                    
+                    // Create scenario with prompt as title preview
+                    const titlePreview = prompt.length > 30 ? prompt.substring(0, 30) + '...' : prompt;
+                    
+                    const updatedScenario = {
+                        id: newSessionId,
+                        title: { en: titlePreview, zh: titlePreview },
                         taskName: "Live Execution",
                         userQuery: data.task.query,
                         totalSteps: 0,
                         steps: []
-                    });
+                    };
+                    
+                    // If there's an existing "New Chat" entry, update it with the new session ID
+                    if (liveScenario && (liveScenario.title.en === "New Chat" || liveScenario.title.zh === "新对话")) {
+                        try {
+                            // Delete the old "New Chat" entry
+                            await api.deleteScenario(liveScenario.id);
+                            // Save with the new session ID
+                            await api.saveScenario(updatedScenario.title, updatedScenario, newSessionId);
+                            await refreshScenarios();
+                        } catch (e) {
+                            console.error("Failed to update scenario", e);
+                        }
+                    }
+                    
+                    setLiveScenario(updatedScenario);
+                    setActiveScenarioId(newSessionId);
                     setCurrentStepIndex(0);
                     setErasedIndices(new Set());
                     setIsPlaying(true);
@@ -432,32 +505,23 @@ export const useSimulation = () => {
             // Restore session if needed (e.g. continuing from history)
             let currentSessionId = sessionId;
             if (!currentSessionId || currentSessionId !== activeScenarioId) {
-                // Determine valid ID to restore
-                // If activeScenarioId is a saved ID (not a live session ID which starts with sess_), we can restore it.
-                // Actually live session IDs also start with sess_, but if it's not the *current* sessionId, we need to restore context.
-                // However, our backend doesn't persist 'active' memory across server restarts unless we hydrate it.
-                // So if we are viewing a history item (saved scenario), it has an ID.
-                // We call restore_session with that ID.
-
                 setIsLoading(true);
                 try {
                     const data = await api.restoreSession(apiKey, activeScenarioId);
                     currentSessionId = data.sessionId;
                     setSessionId(currentSessionId);
 
-                    // We must also ensure liveScenario is set to activeScenario so UI updates correctly
-                    // activeScenario is already the history item. We clone it to liveScenario.
-                    // Wait, if we restore, we should switch to "Live Mode" fully.
+                    // Ensure liveScenario is synced with the restored session
                     setLiveScenario({ ...activeScenario });
                     setIsLiveMode(true);
-
-                    // Small delay to ensure state updates? 
-                    // No, we use local var currentSessionId for next call.
+                    setCurrentStepIndex(activeScenario.steps.length);
                 } catch (e) {
                     console.error("Failed to restore session", e);
-                    alert("Failed to restore previous session. It might be incompatible.");
+                    alert("无法恢复之前的会话。请尝试重新开始。");
                     setIsLoading(false);
                     return;
+                } finally {
+                    setIsLoading(false);
                 }
             }
 
@@ -494,55 +558,78 @@ export const useSimulation = () => {
         },
 
         handleNewConversation: async () => {
-            // Auto Save current if valid
+            // Auto Save current if valid (relaxed conditions)
             if (isLiveMode && liveScenario && liveScenario.steps.length > 0) {
                 try {
-                    // Generate Title if needed (or assume backend default if we send empty, 
-                    // but backend needs history to gen title, so we must call generateTitle first or let handleSave do it)
-                    // Let's generate title first if title is default
+                    // Use sessionId if available, otherwise generate one from liveScenario.id
+                    const saveId = sessionId || liveScenario.id;
+                    
+                    // Generate Title if needed
                     let titleToSave = liveScenario.title;
-                    if ((!titleToSave.en || titleToSave.en === "Live Session") && liveScenario.steps.length > 0) {
+                    if ((!titleToSave.en || titleToSave.en === "Live Session" || titleToSave.en === "New Session" || titleToSave.en === "New Chat") && liveScenario.steps.length > 0) {
                         try {
                             const res = await api.generateTitle(liveScenario.steps.map(s => ({
                                 role: s.stepType === 'user_input' ? 'user' : (s.stepType === 'tool' ? 'tool' : 'assistant'),
-                                message: s.thought || s.toolDetails || s.action // approximation
+                                message: s.thought || s.toolDetails || s.action
                             })));
                             if (res.title) {
                                 titleToSave = { en: res.title, zh: res.title };
                             }
                         } catch (err) {
-                            console.warn("Title Gen Failed", err);
+                            // Ignore title generation errors
                         }
                     }
-
-                    await api.saveScenario(typeof titleToSave === 'string' ? titleToSave : titleToSave.en, {
+                    
+                    // Save with sessionId as the permanent ID
+                    await api.saveScenario(titleToSave, {
                         ...liveScenario,
+                        id: saveId,
                         title: titleToSave
-                    });
-                    refreshScenarios(); // Refresh list
+                    }, saveId);
+                    
+                    // Wait for database to update
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // Refresh history list
+                    await refreshScenarios();
                 } catch (e) {
-                    console.error("Auto Save Failed", e);
+                    // Ignore save errors, continue with new conversation
                 }
+            }
+
+            // Create new empty conversation with unique ID
+            const newChatId = `new_${Date.now()}`;
+            const newEmptyScenario: Trajectory = {
+                id: newChatId,
+                title: { en: "New Chat", zh: "新对话" },
+                taskName: "New Chat",
+                userQuery: "",
+                totalSteps: 0,
+                steps: []
+            };
+            
+            // Immediately save the empty conversation to database
+            try {
+                await api.saveScenario(newEmptyScenario.title, newEmptyScenario, newChatId);
+                // Force refresh scenarios
+                await refreshScenarios();
+                // Small delay to ensure state updates
+                await new Promise(resolve => setTimeout(resolve, 50));
+            } catch (e) {
+                console.error("Failed to create new chat", e);
+                alert("创建新对话失败，请重试");
+                return;
             }
 
             // Reset for New Conversation (Stay in Live Mode)
             setIsPlaying(false);
             setCurrentStepIndex(0);
             setErasedIndices(new Set());
-            setSessionId(null);
+            setSessionId(null); // Clear sessionId - will be created when user sends first message
             setCustomQuery("");
-
-            // Set empty live scenario so UI shows empty state
-            const newEmptyScenario: Trajectory = {
-                id: `new-${Date.now()}`,
-                title: { en: "New Session", zh: "新会话" },
-                taskName: "New Session",
-                userQuery: "", // Empty for clean UI
-                totalSteps: 0,
-                steps: []
-            };
+            
             setLiveScenario(newEmptyScenario);
-            setActiveScenarioId(newEmptyScenario.id); // Ensure this is active
+            setActiveScenarioId(newChatId);
             setIsLiveMode(true);
         },
 
@@ -572,14 +659,11 @@ export const useSimulation = () => {
         isEvaluationModalOpen, // Export
         setIsEvaluationModalOpen, // Export
         evaluateSession: async (language: string = "en") => {
-            if (!sessionId) return;
-
-            // Note: If result exists, we ideally check if language matches? 
-            // For now, simple caching: if result exists, show it regardless of language or we clear it if language changes?
-            // Users might toggle language and expect re-evaluation? 
-            // Let's assume re-click with result just opens modal. 
-            // If they really want re-eval in new language, they might need to reset or we check cache key.
-            // For simplicity: stick to cache. If they want zh, they should set zh before evaluating.
+            // Check if we have an active scenario
+            if (!activeScenarioId || !activeScenario || activeScenario.steps.length === 0) {
+                alert(language === 'zh' ? '没有可评估的对话' : 'No conversation to evaluate');
+                return;
+            }
 
             if (evaluationResult) {
                 setIsEvaluationModalOpen(true);
@@ -588,8 +672,34 @@ export const useSimulation = () => {
 
             setIsEvaluating(true);
             setIsEvaluationModalOpen(true);
+            
             try {
-                const result = await api.evaluateSession(sessionId, language);
+                // ALWAYS restore session for evaluation to ensure fresh session with both agents' data
+                console.log('[Evaluate] Active scenarioId:', activeScenarioId);
+                console.log('[Evaluate] Active scenario:', activeScenario);
+                console.log('[Evaluate] API Key:', apiKey ? 'Present' : 'Missing');
+                console.log('[Evaluate] Restoring session for evaluation...');
+                
+                let currentSessionId: string;
+                try {
+                    const data = await api.restoreSession(apiKey, activeScenarioId);
+                    currentSessionId = data.sessionId;
+                    setSessionId(currentSessionId);
+                    console.log('[Evaluate] Session restored successfully:', currentSessionId);
+                    console.log('[Evaluate] Restored data:', data);
+                    
+                    // Wait a bit for session to be fully initialized
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (restoreError: any) {
+                    console.error('[Evaluate] Failed to restore session:', restoreError);
+                    console.error('[Evaluate] Error response:', restoreError.response);
+                    const errMsg = restoreError.response?.data?.detail || restoreError.message;
+                    throw new Error(`Failed to restore session: ${errMsg}`);
+                }
+
+                console.log('[Evaluate] Evaluating session:', currentSessionId);
+                const result = await api.evaluateSession(currentSessionId, language);
+                console.log('[Evaluate] Evaluation result:', result);
                 setEvaluationResult(result);
 
                 // Update liveScenario to persist this result in memory for now
@@ -599,17 +709,54 @@ export const useSimulation = () => {
 
                 // Also update savedScenarios if it exists there
                 setSavedScenarios(prev => prev.map(s =>
-                    s.id === sessionId ? { ...s, evaluation: result } : s
+                    s.id === activeScenarioId ? { ...s, evaluation: result } : s
                 ));
+                
+                // Refresh scenarios from database to ensure evaluation is persisted
+                await refreshScenarios();
 
-            } catch (e) {
+            } catch (e: any) {
                 console.error("Evaluation failed", e);
-                alert("Evaluation failed. Please try again.");
+                const errorMsg = e.response?.data?.detail || e.message || "Unknown error";
+                alert(`Evaluation failed: ${errorMsg}\n\nPlease make sure:\n1. The conversation has completed steps\n2. Both agents have responses\n3. The backend server is running`);
                 setIsEvaluationModalOpen(false); // Close on error
             } finally {
                 setIsEvaluating(false);
             }
+        },
+
+        deleteScenario: async (scenarioId: string) => {
+            try {
+                await api.deleteScenario(scenarioId);
+                
+                // If deleting current scenario, switch to another one
+                if (activeScenarioId === scenarioId) {
+                    // Find another scenario to switch to
+                    const remaining = savedScenarios.filter(s => s.id !== scenarioId);
+                    if (remaining.length > 0) {
+                        setActiveScenarioId(remaining[0].id);
+                    } else {
+                        // No scenarios left, create a new one
+                        const newSessionId = `sess_${Date.now()}_new`;
+                        const newEmptyScenario: Trajectory = {
+                            id: newSessionId,
+                            title: { en: "New Chat", zh: "新对话" },
+                            taskName: "New Chat",
+                            userQuery: "",
+                            totalSteps: 0,
+                            steps: []
+                        };
+                        setLiveScenario(newEmptyScenario);
+                        setActiveScenarioId(newSessionId);
+                    }
+                }
+                
+                // Refresh scenarios list
+                await refreshScenarios();
+            } catch (e) {
+                console.error("Delete failed", e);
+                alert("删除失败，请重试");
+            }
         }
     };
 };
-

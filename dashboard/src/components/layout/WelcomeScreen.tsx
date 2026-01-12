@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Box, Cpu, Plus, Search, Zap } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
-import { scenarios } from '../../data/mockData';
+import { api } from '../../services/api';
+import type { Trajectory } from '../../data/mockData';
 
 interface WelcomeScreenProps {
     onStart: (config: { scenarioId: string; payload: string; erasureRate: number; query?: string }) => void;
@@ -31,9 +32,23 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     const [selectedScenarioId, setSelectedScenarioId] = useState<string>(''); // Start empty
     const [promptText, setPromptText] = useState('');
     const [showScenarioList, setShowScenarioList] = useState(false);
+    const [scenarios, setScenarios] = useState<Trajectory[]>([]);
 
     const [payload, setPayload] = useState('1101');
     const [erasureRate] = useState(initialErasureRate);
+
+    // Load scenarios from database
+    useEffect(() => {
+        const loadScenarios = async () => {
+            try {
+                const saved = await api.listScenarios();
+                setScenarios(saved);
+            } catch (e) {
+                console.error("Failed to load scenarios", e);
+            }
+        };
+        loadScenarios();
+    }, []);
 
     const modes = [
         { id: 'tool', title: 'Tool use', icon: Box, desc: 'Agent uses external tools' },
@@ -41,7 +56,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         { id: 'add', title: 'Add your agent', icon: Plus, desc: 'Custom agent integration' },
     ];
 
-    const handleSelectScenario = (s: typeof scenarios[0]) => {
+    const handleSelectScenario = (s: Trajectory) => {
         setSelectedScenarioId(s.id);
         const title = locale === 'zh' ? s.title.zh : s.title.en;
         setPromptText(s.userQuery || title);
@@ -246,12 +261,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                 </div>
 
                                                 <button
-                                                    onClick={() => onStart({
-                                                        scenarioId: selectedScenarioId || scenarios[0].id,
-                                                        payload,
-                                                        erasureRate,
-                                                        query: promptText
-                                                    })}
+                                                    onClick={() => {
+                                                        const scenarioId = selectedScenarioId || (scenarios.length > 0 ? scenarios[0].id : 'custom');
+                                                        onStart({
+                                                            scenarioId,
+                                                            payload,
+                                                            erasureRate,
+                                                            query: promptText
+                                                        });
+                                                    }}
                                                     className={`px-8 py-3 rounded-xl font-bold text-base shadow-sm flex items-center gap-2 transition-all transform hover:-translate-y-0.5
                                                         ${selectedScenarioId || promptText
                                                             ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-indigo-200'

@@ -33,7 +33,10 @@ interface ControlPanelProps {
     onNew?: () => void;
     onEvaluate?: (lang: string) => void;
     isEvaluating?: boolean;
-    evaluationResult?: { model_a_score: number, model_b_score: number, reason: string } | null; // New prop
+    evaluationResult?: { model_a_score: number, model_b_score: number, reason: string } | null;
+    onRefreshHistory?: () => void;
+    onDeleteScenario?: (id: string) => void;
+    setIsHistoryViewOpen?: (open: boolean) => void;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -59,7 +62,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
     onNew,
     onEvaluate,
     isEvaluating,
-    evaluationResult // New prop
+    evaluationResult,
+    onRefreshHistory,
+    onDeleteScenario,
+    setIsHistoryViewOpen
 }) => {
     const { t, locale, setLocale } = useI18n();
 
@@ -99,33 +105,126 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 {/* 2. History List (Reduced Height) */}
                 {!isComparisonMode && (
                     <div className="h-60 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col shrink-0">
-                        <div className="p-3 border-b border-slate-50 bg-slate-50/50">
+                        <div className="p-3 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                                 {locale === 'zh' ? '历史记录' : 'History'}
                             </h3>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-slate-200">
-                            {scenarios.slice().reverse().map((s) => (
+                            {onRefreshHistory && (
                                 <button
-                                    key={s.id}
-                                    onClick={() => onSelectScenario(s.id)}
-                                    className={`w-full text-left p-3 rounded-lg text-sm transition-all group ${activeScenarioId === s.id
-                                        ? 'bg-indigo-50 text-indigo-700 font-medium'
-                                        : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
-                                        }`}
+                                    onClick={onRefreshHistory}
+                                    className="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-slate-100"
+                                    title={locale === 'zh' ? '刷新历史记录' : 'Refresh History'}
                                 >
-                                    <div className="line-clamp-1 leading-relaxed">
-                                        {locale === 'zh' ? (s.title.zh || s.title.en) : s.title.en}
-                                    </div>
-                                    <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span>{s.steps.length} turns</span>
-                                    </div>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
                                 </button>
-                            ))}
+                            )}
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-slate-200">
+                            {scenarios.length === 0 ? (
+                                <div className="text-center text-slate-400 text-xs py-8">
+                                    {locale === 'zh' ? '暂无历史记录' : 'No history yet'}
+                                </div>
+                            ) : (
+                                scenarios.map((s) => {
+                                    // Extract timestamp from session ID (sess_TIMESTAMP_xxx)
+                                    const timestampMatch = s.id.match(/sess_(\d+)_/);
+                                    let timeStr = '';
+                                    if (timestampMatch) {
+                                        const timestamp = parseInt(timestampMatch[1]) * 1000;
+                                        const date = new Date(timestamp);
+                                        const now = new Date();
+                                        const diffMs = now.getTime() - date.getTime();
+                                        const diffMins = Math.floor(diffMs / 60000);
+                                        const diffHours = Math.floor(diffMs / 3600000);
+                                        const diffDays = Math.floor(diffMs / 86400000);
+                                        
+                                        if (diffMins < 1) {
+                                            timeStr = locale === 'zh' ? '刚刚' : 'Just now';
+                                        } else if (diffMins < 60) {
+                                            timeStr = locale === 'zh' ? `${diffMins}分钟前` : `${diffMins}m ago`;
+                                        } else if (diffHours < 24) {
+                                            timeStr = locale === 'zh' ? `${diffHours}小时前` : `${diffHours}h ago`;
+                                        } else if (diffDays < 7) {
+                                            timeStr = locale === 'zh' ? `${diffDays}天前` : `${diffDays}d ago`;
+                                        } else {
+                                            timeStr = date.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' });
+                                        }
+                                    }
+                                    
+                                    return (
+                                        <div
+                                            key={s.id}
+                                            onClick={() => onSelectScenario(s.id)}
+                                            className={`w-full text-left p-3 rounded-lg text-sm transition-all group relative cursor-pointer ${activeScenarioId === s.id
+                                                ? 'bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 font-medium border-l-3 border-indigo-500 shadow-sm'
+                                                : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="line-clamp-1 leading-relaxed flex-1">
+                                                    {locale === 'zh' ? (s.title.zh || s.title.en) : s.title.en}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    {activeScenarioId === s.id && (
+                                                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-lg shadow-indigo-500/50"></div>
+                                                    )}
+                                                    {onDeleteScenario && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (confirm(locale === 'zh' ? '确定要删除这条对话吗？' : 'Delete this conversation?')) {
+                                                                    onDeleteScenario(s.id);
+                                                                }
+                                                            }}
+                                                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-all"
+                                                            title={locale === 'zh' ? '删除' : 'Delete'}
+                                                        >
+                                                            <svg className="w-3.5 h-3.5 text-slate-400 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-2 text-[10px]">
+                                                <span className={activeScenarioId === s.id ? 'text-indigo-600' : 'text-slate-400'}>
+                                                    {s.steps.length} turns
+                                                </span>
+                                                {timeStr && (
+                                                    <>
+                                                        <span className={activeScenarioId === s.id ? 'text-indigo-400' : 'text-slate-400'}>•</span>
+                                                        <span className={activeScenarioId === s.id ? 'text-indigo-600' : 'text-slate-400'}>
+                                                            {timeStr}
+                                                        </span>
+                                                    </>
+                                                )}
+                                                {activeScenarioId === s.id && (
+                                                    <>
+                                                        <span className="text-indigo-400">•</span>
+                                                        <span className="text-indigo-600 font-semibold">
+                                                            {locale === 'zh' ? '当前' : 'Active'}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                         <div className="p-2 border-t border-slate-50 text-center">
-                            <button className="text-[10px] text-slate-500 hover:text-indigo-600 font-medium flex items-center justify-center gap-1 transition-colors">
-                                View all history <span>→</span>
+                            <button 
+                                onClick={() => {
+                                    if (onRefreshHistory) {
+                                        setIsHistoryViewOpen?.(true);
+                                    }
+                                }}
+                                className="w-full text-[10px] text-slate-500 hover:text-indigo-600 font-medium flex items-center justify-center gap-1 transition-colors"
+                            >
+                                {locale === 'zh' ? '查看全部历史' : 'View all history'} <span>→</span>
                             </button>
                         </div>
                     </div>

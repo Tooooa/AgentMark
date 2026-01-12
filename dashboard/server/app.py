@@ -22,6 +22,10 @@ TOOL_DATA_ROOT = PROJECT_ROOT / "experiments/toolbench/data/data/toolenv/tools"
 import sys
 sys.path.append(str(PROJECT_ROOT))
 
+# --- Database Setup ---
+from dashboard.server.database import ConversationDB
+db = ConversationDB(db_path=str(PROJECT_ROOT / "dashboard/data/conversations.db"))
+
 # --- Retriever Setup ---
 from dashboard.server.retriever import ToolBenchRetriever
 # from retriever import ToolBenchRetriever # If running from server dir? 
@@ -290,32 +294,15 @@ async def init_custom_session(req: CustomInitRequest):
 
 # --- Scenario Persistence ---
 
-SAVED_SCENARIOS_DIR = PROJECT_ROOT / "dashboard/src/data/saved"
-SAVED_SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
-
-# Removed duplicate SaveScenarioRequest
-
 @app.get("/api/scenarios")
-async def list_scenarios():
-    scenarios = []
-    # Saved Scenarios
-    files = list(SAVED_SCENARIOS_DIR.glob("*.json"))
-    # Sort by modification time, newest first
-    files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
-
-    scenarios = []
-    # Saved Scenarios
-    for file_path in files:
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                # Ensure minimal fields
-                if "id" in data and "title" in data:
-                    scenarios.append(data)
-        except Exception as e:
-            print(f"[ERROR] Failed to load scenario {file_path}: {e}")
-    
-    return scenarios
+async def list_scenarios(search: Optional[str] = None, limit: int = 100):
+    """List all saved conversations from database with optional search"""
+    try:
+        scenarios = db.list_conversations(limit=limit, search=search)
+        return scenarios
+    except Exception as e:
+        print(f"[ERROR] Failed to list scenarios: {e}")
+        return []
 
 class SaveScenarioRequest(BaseModel):
     title: Any # str or dict
@@ -324,25 +311,42 @@ class SaveScenarioRequest(BaseModel):
 
 @app.post("/api/save_scenario")
 async def save_scenario(req: SaveScenarioRequest):
+    """Save conversation to database"""
     try:
         scenario_id = req.id if req.id else str(uuid.uuid4())
-        file_path = SAVED_SCENARIOS_DIR / f"{scenario_id}.json"
         
         scenario_data = req.data
         scenario_data["id"] = scenario_id
         
-        # If user provides a single string title, we wrap it
+        # Handle title format
         if isinstance(req.title, str):
-             scenario_data["title"] = { "en": req.title, "zh": req.title }
+            scenario_data["title"] = {"en": req.title, "zh": req.title}
+        else:
+            scenario_data["title"] = req.title
         
-        # Save to disk
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(scenario_data, f, indent=2, ensure_ascii=False)
-            
-        print(f"[INFO] Saved scenario {scenario_id} to {file_path}")
+        # Save to database
+        db.save_conversation(scenario_data)
+        
+        print(f"[INFO] Saved scenario {scenario_id} to database")
         return {"status": "success", "id": scenario_id}
     except Exception as e:
         print(f"[ERROR] Save failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/scenarios/{scenario_id}")
+async def delete_scenario(scenario_id: str):
+    """Delete a conversation from database"""
+    try:
+        deleted = db.delete_conversation(scenario_id)
+        if deleted:
+            print(f"[INFO] Deleted scenario {scenario_id} from database")
+            return {"status": "success", "id": scenario_id}
+        else:
+            raise HTTPException(status_code=404, detail="Scenario not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR] Delete failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 class GenerateTitleRequest(BaseModel):
@@ -419,16 +423,20 @@ class RestoreSessionRequest(BaseModel):
 
 @app.post("/api/restore_session")
 async def restore_session(req: RestoreSessionRequest):
-    # 1. Load saved scenario
-    file_path = SAVED_SCENARIOS_DIR / f"{req.scenarioId}.json"
-    if not file_path.exists():
+    """Restore session from database"""
+    print(f"[INFO] Restore session request for scenarioId: {req.scenarioId}")
+    
+    # 1. Load saved scenario from database
+    data = db.get_conversation(req.scenarioId)
+    
+    if not data:
+        print(f"[ERROR] Scenario {req.scenarioId} not found in database")
+        # List all available conversations for debugging
+        all_convs = db.list_conversations(limit=10)
+        print(f"[INFO] Available conversations: {[c['id'] for c in all_convs]}")
         raise HTTPException(status_code=404, detail="Saved scenario not found")
-        
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load scenario file: {e}")
+    
+    print(f"[INFO] Found scenario in database: {data.get('id')}, steps: {len(data.get('steps', []))}")
 
     # 2. Init Session
     session_id = f"sess_{int(time.time())}_{req.scenarioId}_restored"
@@ -449,7 +457,8 @@ async def restore_session(req: RestoreSessionRequest):
     # This is "best effort" mapping from UI-steps to internal-trajectory
     # UI Step Types: 'user_input', 'thought' (with action/tool), 'tool', 'finish'
     
-    trajectory = []
+    watermarked_trajectory = []
+    baseline_trajectory = []
     
     steps = data.get("steps", [])
     
@@ -457,24 +466,20 @@ async def restore_session(req: RestoreSessionRequest):
     # Logic:
     # - if stepType == 'user_input': -> User Message
     # - if stepType == 'thought' or 'finish': -> Assistant Message (reconstruct JSON)
-    # - if stepType == 'tool': -> Tool Message (Observation) ... WAIT, 'tool' type usually follows 'thought'
-    # Actually in our UI mock data 'Step' has 'thought', 'action', 'toolDetails'. 
-    # Let's review Step structure:
-    # interface Step { stepIndex, thought, action, toolDetails, toolOutput, stepType, ... }
-    
-    # For a 'thought' step that calls a tool:
-    # Assistant: JSON { action: "...", thought: "..." }
-    # Tool: Observation string (stored where? usually 'toolDetails' or separate?)
+    # - if stepType == 'tool': -> Tool Message (Observation)
     
     # Let's iterate and reconstruct
     for step in steps:
         s_type = step.get("stepType", "thought")
         
         if s_type == "user_input":
-            trajectory.append({"role": "user", "message": step.get("thought") or step.get("action")})
+            # User messages are the same for both agents
+            user_msg = {"role": "user", "message": step.get("thought") or step.get("action")}
+            watermarked_trajectory.append(user_msg)
+            baseline_trajectory.append(user_msg)
             
-        elif s_type in ["thought", "finish"]:
-            # Reconstruct Assistant JSON
+        elif s_type in ["thought", "finish", "tool"]:
+            # Reconstruct Watermarked Agent's messages
             thought = step.get("thought", "")
             action = step.get("action", "")
             final_answer = step.get("finalAnswer")
@@ -486,7 +491,7 @@ async def restore_session(req: RestoreSessionRequest):
             elif action == "Finish":
                 chosen_tool = "Finish"
             
-            # Reconstruct Dict
+            # Reconstruct Dict for watermarked agent
             model_out_dict = {
                 "action": chosen_tool,
                 "action_args": {},
@@ -497,20 +502,52 @@ async def restore_session(req: RestoreSessionRequest):
                  model_out_dict["action_args"] = { "final_answer": final_answer }
             
             # Store as string (mocking the LLM raw output)
-            trajectory.append({"role": "assistant", "message": json.dumps(model_out_dict)})
+            watermarked_trajectory.append({"role": "assistant", "message": json.dumps(model_out_dict)})
             
-            # Did this step produce an observation? 
-            # In our data model, 'Step' contains the RESULT of the action too? 
-            # StepCard displays 'observation' from `step.observation` (if valid field? Check app.py final_data)
-            # Yes, app.py sends "observation" in the same packet.
-            
-            obs = step.get("observation")
+            # Add observation for watermarked agent
+            obs = step.get("toolDetails") or step.get("observation")
             if obs and chosen_tool != "Finish":
-                trajectory.append({"role": "tool", "message": obs})
+                watermarked_trajectory.append({"role": "tool", "message": obs})
+            
+            # Reconstruct Baseline Agent's messages (if exists)
+            baseline_data = step.get("baseline")
+            if baseline_data:
+                baseline_thought = baseline_data.get("thought", "")
+                baseline_action = baseline_data.get("action", "")
+                baseline_final_answer = baseline_data.get("finalAnswer")
+                
+                # Parse baseline action
+                baseline_tool = "Finish"
+                if baseline_action.startswith("Call: "):
+                    baseline_tool = baseline_action.replace("Call: ", "").strip()
+                elif baseline_action == "Finish":
+                    baseline_tool = "Finish"
+                
+                # Reconstruct Dict for baseline agent
+                baseline_model_dict = {
+                    "action": baseline_tool,
+                    "action_args": {},
+                    "thought": baseline_thought
+                }
+                
+                if baseline_tool == "Finish" and baseline_final_answer:
+                    baseline_model_dict["action_args"] = { "final_answer": baseline_final_answer }
+                
+                baseline_trajectory.append({"role": "assistant", "message": json.dumps(baseline_model_dict)})
+                
+                # Add observation for baseline agent
+                baseline_obs = baseline_data.get("toolDetails") or baseline_data.get("observation")
+                if baseline_obs and baseline_tool != "Finish":
+                    baseline_trajectory.append({"role": "tool", "message": baseline_obs})
+            else:
+                # If no baseline data, copy watermarked data
+                baseline_trajectory.append({"role": "assistant", "message": json.dumps(model_out_dict)})
+                if obs and chosen_tool != "Finish":
+                    baseline_trajectory.append({"role": "tool", "message": obs})
 
-    # Hydrate both agents
-    session.watermarked_state.trajectory = list(trajectory)
-    session.baseline_state.trajectory = list(trajectory)
+    # Hydrate both agents with their respective trajectories
+    session.watermarked_state.trajectory = watermarked_trajectory
+    session.baseline_state.trajectory = baseline_trajectory
     
     # Set step count
     session.watermarked_state.step_count = len(steps)
@@ -519,7 +556,9 @@ async def restore_session(req: RestoreSessionRequest):
     # Store session
     sessions[session_id] = session
     
-    print(f"[INFO] Restored session {session_id} with {len(trajectory)} turns.")
+    print(f"[INFO] Restored session {session_id} with {len(watermarked_trajectory)} watermarked turns and {len(baseline_trajectory)} baseline turns.")
+    print(f"[INFO] Session stored in sessions dict. Total sessions: {len(sessions)}")
+    print(f"[INFO] Session keys: {list(sessions.keys())}")
     
     return {
         "sessionId": session_id,
@@ -894,7 +933,11 @@ class EvaluateRequest(BaseModel):
 
 @app.post("/api/evaluate")
 async def evaluate_session(req: EvaluateRequest):
+    print(f"[INFO] Evaluate request for session: {req.sessionId}")
+    print(f"[INFO] Available sessions: {list(sessions.keys())}")
+    
     if req.sessionId not in sessions:
+        print(f"[ERROR] Session {req.sessionId} not found in sessions dict")
         raise HTTPException(status_code=404, detail="Session not found")
     
     sess = sessions[req.sessionId]
@@ -1002,21 +1045,38 @@ async def evaluate_session(req: EvaluateRequest):
 
             sess.evaluation_result = final_result # Persist in session
 
-            # Attempt to update the original JSON file if it exists in SAVED_SCENARIOS_DIR
+            # Update the database with evaluation result
             try:
-                original_id = sess.task.get("id")
+                # Try to get the original scenario ID from the session
+                original_id = sess.watermarked_state.task.get("id") or sess.baseline_state.task.get("id")
+                
+                # If session ID contains "_restored", extract the original ID
+                if "_restored" in req.sessionId:
+                    # Format: sess_timestamp_ORIGINAL_ID_restored
+                    parts = req.sessionId.split("_")
+                    if len(parts) >= 3:
+                        # Find the part that's not "sess", not a timestamp, and not "restored"
+                        for part in parts:
+                            if part not in ["sess", "restored"] and not part.isdigit():
+                                original_id = part
+                                break
+                
+                print(f"[INFO] Attempting to save evaluation for scenario: {original_id}")
+                
                 if original_id:
-                    file_path = SAVED_SCENARIOS_DIR / f"{original_id}.json"
-                    if file_path.exists():
-                        with open(file_path, "r+", encoding="utf-8") as f:
-                            data = json.load(f)
-                            data["evaluation"] = final_result
-                            f.seek(0)
-                            json.dump(data, f, indent=2, ensure_ascii=False)
-                            f.truncate()
-                        print(f"[INFO] Updated evaluation for saved scenario {original_id}")
+                    existing = db.get_conversation(original_id)
+                    if existing:
+                        existing["evaluation"] = final_result
+                        db.save_conversation(existing)
+                        print(f"[INFO] Successfully updated evaluation for scenario {original_id} in database")
+                    else:
+                        print(f"[WARN] Scenario {original_id} not found in database")
+                else:
+                    print(f"[WARN] Could not determine original scenario ID from session {req.sessionId}")
             except Exception as save_err:
-                print(f"[WARN] Failed to auto-save evaluation to disk: {save_err}")
+                print(f"[WARN] Failed to auto-save evaluation to database: {save_err}")
+                import traceback
+                traceback.print_exc()
 
             return final_result
             

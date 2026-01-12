@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-const API_BASE = '/api';
+const API_BASE = '';
 
 export interface Scenario {
     id: string;
@@ -36,37 +36,37 @@ export const api = {
     },
 
     initSession: async (apiKey: string, scenarioId: string, payload: string) => {
-        const response = await axios.post(`${API_BASE}/init`, { apiKey, scenarioId, payload });
+        const response = await axios.post(`${API_BASE}/api/init`, { apiKey, scenarioId, payload });
         return response.data; // { sessionId, task, totalSteps }
     },
 
     initCustomSession: async (apiKey: string, query: string, payload: string) => {
-        const response = await axios.post(`${API_BASE}/init_custom`, { apiKey, query, payload });
+        const response = await axios.post(`${API_BASE}/api/init_custom`, { apiKey, query, payload });
         return response.data; // { sessionId, task, totalSteps }
     },
 
     step: async (sessionId: string): Promise<StepResponse> => {
-        const response = await axios.post(`${API_BASE}/step`, { sessionId });
+        const response = await axios.post(`${API_BASE}/api/step`, { sessionId });
         return response.data;
     },
 
     continueSession: async (sessionId: string, prompt: string) => {
-        const response = await axios.post(`${API_BASE}/continue`, { sessionId, prompt });
+        const response = await axios.post(`${API_BASE}/api/continue`, { sessionId, prompt });
         return response.data;
     },
 
     listScenarios: async (): Promise<any[]> => {
-        const response = await axios.get(`${API_BASE}/scenarios`);
+        const response = await axios.get(`${API_BASE}/api/scenarios`);
         return response.data;
     },
 
     saveScenario: async (title: any, data: any, id?: string) => {
-        const response = await axios.post(`${API_BASE}/save_scenario`, { title, data, id });
+        const response = await axios.post(`${API_BASE}/api/save_scenario`, { title, data, id });
         return response.data; // { status: "success", id: "..." }
     },
 
     stepStream: async (sessionId: string, onChunk: (data: any) => void): Promise<void> => {
-        const response = await fetch(`${API_BASE}/step`, {
+        const response = await fetch(`${API_BASE}/api/step`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId })
@@ -99,12 +99,17 @@ export const api = {
     },
 
     generateTitle: async (history: any[]) => {
-        const response = await axios.post(`${API_BASE}/generate_title`, { history });
+        const response = await axios.post(`${API_BASE}/api/generate_title`, { history });
         return response.data; // { title: string }
     },
 
     evaluateSession: async (sessionId: string, language: string = "en") => {
-        const response = await axios.post(`${API_BASE}/evaluate`, { sessionId, language });
+        const response = await axios.post(`${API_BASE}/api/evaluate`, { sessionId, language });
+        return response.data;
+    },
+
+    deleteScenario: async (scenarioId: string) => {
+        const response = await axios.delete(`${API_BASE}/api/scenarios/${scenarioId}`);
         return response.data;
     }
 };
