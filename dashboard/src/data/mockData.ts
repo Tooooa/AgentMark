@@ -33,6 +33,7 @@ export type Step = {
         tokens: number;
     };
     finalAnswer?: string;
+    isHidden?: boolean;
     // New field for Comparison Mode (Dual Agent)
     baseline?: {
         thought: string;
@@ -45,6 +46,7 @@ export type Step = {
             latency: number;
             tokens: number;
         };
+        isHidden?: boolean;
     };
 };
 

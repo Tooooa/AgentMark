@@ -184,12 +184,14 @@ export const useSimulation = () => {
                         watermark: { bits: "", matrixRows: [], rankContribution: 0 },
                         stepType: isWmPreDone ? 'tool' : 'tool', // Avoid 'finish' to prevent duplicate UI card
                         toolDetails: "",
+                        isHidden: isWmPreDone,
                         baseline: {
                             thought: isBlPreDone ? "" : "Thinking...",
                             action: "",
                             distribution: [],
                             toolDetails: "",
-                            stepType: isBlPreDone ? 'tool' : 'tool' // Avoid 'finish' here too
+                            stepType: isBlPreDone ? 'tool' : 'tool', // Avoid 'finish' here too
+                            isHidden: isBlPreDone
                         }
                     };
                     return {

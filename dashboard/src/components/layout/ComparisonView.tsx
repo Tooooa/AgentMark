@@ -96,6 +96,9 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedInd
                                 metrics: undefined // Baseline metrics might not be tracked or need separate field?
                             } : step;
 
+                            // Skip rendering if baseline step is hidden
+                            if (baselineStep.isHidden) return null;
+
                             return (
                                 <StepCard
                                     key={`nw-${step.stepIndex}`}
@@ -127,14 +130,17 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedInd
                         ref={scrollRefB}
                         onScroll={() => handleScroll('B')}
                     >
-                        {visibleSteps.map((step) => (
-                            <StepCard
-                                key={`wm-${step.stepIndex}`}
-                                step={step}
-                                isErased={erasedIndices.has(step.stepIndex)}
-                                showWatermarkDetails={true}
-                            />
-                        ))}
+                        {visibleSteps.map((step) => {
+                            if (step.isHidden) return null;
+                            return (
+                                <StepCard
+                                    key={`wm-${step.stepIndex}`}
+                                    step={step}
+                                    isErased={erasedIndices.has(step.stepIndex)}
+                                    showWatermarkDetails={true}
+                                />
+                            );
+                        })}
                         <div ref={bottomRefB} className="h-4" />
                     </div>
                 </div>

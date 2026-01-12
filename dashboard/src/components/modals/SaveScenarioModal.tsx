@@ -19,7 +19,7 @@ const SaveScenarioModal: React.FC<SaveScenarioModalProps> = ({
     scenarioData,
     onSaved
 }) => {
-    const { t, locale } = useI18n();
+    const { locale } = useI18n();
     const [title, setTitle] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
