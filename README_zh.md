@@ -157,9 +157,44 @@ npm run dev
 ### 3. 数据集配置
 
 #### ToolBench
-1. 从 [官方仓库](https://github.com/OpenBMB/ToolBench) 下载 ToolBench 数据（包含 queries, tools 和 reference answers）。
-2. 将解压后的 `data` 文件夹放入 `experiments/toolbench/data/` 目录下。
-   - 预期路径结构：`experiments/toolbench/data/data/toolenv/tools` 等。
+
+> [!IMPORTANT]
+> **ToolBench 数据集是必需的！** 运行 ToolBench 实验前必须完成以下步骤，否则会因缺少工具定义和测试查询而无法运行。
+
+**下载步骤：**
+
+1. **下载 ToolBench 数据集**
+   
+   从 [ToolBench 官方仓库](https://github.com/OpenBMB/ToolBench) 下载完整数据集，包含：
+   - `queries`: 测试查询任务
+   - `tools`: 工具 API 定义 (约 16,000+ 个工具)
+   - `reference answers`: 参考答案 (用于评测)
+
+   ```bash
+   # 推荐使用 Git LFS 或从 Release 页面直接下载
+   # 数据集大小约 2-3 GB
+   ```
+
+2. **放置到正确目录**
+   
+   将解压后的 `data` 文件夹放入 `experiments/toolbench/data/` 目录下：
+   
+   ```bash
+   # 预期的目录结构
+   AgentMark/
+   └── experiments/
+       └── toolbench/
+           └── data/
+               └── data/           # 解压后的数据文件夹
+                   ├── test_query/
+                   ├── toolenv/
+                   │   └── tools/  # 包含所有工具 JSON 定义
+                   └── answer/
+   ```
+
+3. **验证数据集**
+   
+   确认 `experiments/toolbench/data/data/toolenv/tools` 目录下包含多个分类子目录（如 `Search/`, `Social_Media/` 等），每个分类下有工具的 JSON 文件。
 
 #### ALFWorld
 数据集在运行时会自动下载到 `~/.cache/alfworld`，或者您可以手动运行：
