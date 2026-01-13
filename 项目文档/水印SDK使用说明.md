@@ -145,3 +145,15 @@ PYTHONPATH=. python3 tests/fake_agent_llm.py \
 - 脚本会在 system prompt 中自动拼接严格的 JSON 概率指令，调用 DeepSeek，解析 `action_weights`，跑水印采样并解码。
 - 输出包含 `[raw LLM output]`、`frontend distribution diff`、`decoded bits (this step)`；解码比特应匹配 payload 前缀（默认 1101）。
 - 可通过 `--rounds` 多跑几轮，累积解码比特，检查前缀一致性。
+
+## 9. 网关模式（对方只改地址）
+- 启动代理（基于 FastAPI）：`uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8000`
+  - 环境变量：`DEEPSEEK_API_KEY`（必需），可选 `TARGET_LLM_BASE`（默认 https://api.deepseek.com）
+- 对方只需把 LLM BASE_URL 指向 `http://localhost:8000/v1`（或你的部署地址），请求体保持 OpenAI 风格：
+  - `messages` 照常传，`candidates` 可选（显式提供候选优先，未提供则网关提示 LLM 自行生成+打分，可靠性较低）。
+  - 可传 `context` 供水印解码用。
+- 网关自动：
+  1) 注入 JSON 评分指令到 system prompt。
+  2) 转发到 DeepSeek，拿到输出。
+  3) 解析自报概率，跑水印采样/解码，返回原响应并附加 `watermark` 字段（action、probabilities_used、frontend_data、decoded_bits、raw_llm_output）。
+- 对方代码/业务逻辑无需改动，只改调用地址；候选如有请显式提供，可提高水印可靠性。
