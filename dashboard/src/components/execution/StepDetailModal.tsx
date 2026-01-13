@@ -36,6 +36,7 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
     const [visibleLayers, setVisibleLayers] = useState(0);
     const [flyingLayer] = useState<number | null>(null); // Index of layer currently flying
     const [isAnimating, setIsAnimating] = useState(false);
+    const [chartsReady, setChartsReady] = useState(false);
 
     // Layout Refs for coordinate calculation
     const leftChartRef = useRef<HTMLDivElement>(null);
@@ -99,10 +100,14 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
     // Reset and start animation when opened
     useEffect(() => {
         if (isOpen) {
-            setVisibleLayers(0);
-            setIsAnimating(true);
+            setChartsReady(false);
+            // Delay mounting heavy charts until after the modal transition/layout settles.
+            requestAnimationFrame(() => requestAnimationFrame(() => setChartsReady(true)));
+            // Default: render all layers at once (no incremental animation) to avoid UI jank on open.
+            setVisibleLayers(sortedDist.length);
+            setIsAnimating(false);
         }
-    }, [isOpen, step]);
+    }, [isOpen, step, sortedDist.length]);
 
     // Animation Effect
     useEffect(() => {
@@ -214,20 +219,23 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50" ref={containerRef}>
-                        <div className="flex gap-4 h-[500px]">
-                            {/* Left Chart: Decomposition or Single Distribution */}
-                              <div className={`flex-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col ${mode === 'baseline' ? 'max-w-3xl mx-auto w-full' : ''}`} ref={leftChartRef}>
-                                  <h3 className="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider text-center">
-                                      {mode === 'watermarked' ? t('probDecomp') : t('probDist')}
-                                  </h3>
-                                  <div className="flex-1 relative">
-                                      <ResponsiveContainer width="99%" height="100%">
-                                          <BarChart data={decompositionData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                                              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                              <XAxis
-                                                  dataKey="name"
-                                                  tick={{ fontSize: 10 }}
+                      <div className="flex-1 overflow-y-scroll p-6 bg-slate-50/50" ref={containerRef}>
+                          <div className="flex gap-4 h-[500px]">
+                              {/* Left Chart: Decomposition or Single Distribution */}
+                                <div className={`flex-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col ${mode === 'baseline' ? 'max-w-3xl mx-auto w-full' : ''}`} ref={leftChartRef}>
+                                    <h3 className="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider text-center">
+                                        {mode === 'watermarked' ? t('probDecomp') : t('probDist')}
+                                    </h3>
+                                    <div className="flex-1 relative">
+                                        {!chartsReady ? (
+                                            <div className="w-full h-full bg-slate-50 rounded-lg animate-pulse" />
+                                        ) : (
+                                        <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                                            <BarChart data={decompositionData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis
+                                                    dataKey="name"
+                                                    tick={{ fontSize: 10 }}
                                                   interval={decompositionData.length > 10 ? Math.ceil(decompositionData.length / 10) - 1 : 0}
                                                   angle={-45}
                                                   textAnchor="end"
@@ -251,15 +259,16 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                               {mode === 'watermarked' && decompositionData.slice(0, MAX_REFERENCE_LINES).map((d, i) => (
                                                   <ReferenceLine key={`line-${i}`} y={d.prob} stroke="#94a3b8" strokeDasharray="4 4" label={{ position: 'right', value: `P${i + 1}`, fontSize: 10, fill: '#94a3b8' }} />
                                               ))}
-                                              <Bar dataKey="prob" radius={[4, 4, 0, 0]} isAnimationActive={false}>
-                                                  {decompositionData.map((_, i) => (
-                                                      <Cell key={i} fill={getRankColor(i)} />
-                                                  ))}
-                                              </Bar>
-                                          </BarChart>
-                                      </ResponsiveContainer>
-                                  </div>
-                              </div>
+                                                <Bar dataKey="prob" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                                                    {decompositionData.map((_, i) => (
+                                                        <Cell key={i} fill={getRankColor(i)} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                        )}
+                                    </div>
+                                </div>
 
                             {/* Right Section (Only for Watermarked) */}
                             {mode === 'watermarked' && (
@@ -269,11 +278,11 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                         <ArrowRight size={48} />
                                     </div>
 
-                                    {/* Right Chart: Recombination */}
-                                    <div className="flex-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col" ref={rightChartRef}>
-                                        <h3 className="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider text-center">
-                                            {t('recombination')}
-                                            {!isAnimating && visibleLayers >= sortedDist.length && (
+                                      {/* Right Chart: Recombination */}
+                                      <div className="flex-1 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col" ref={rightChartRef}>
+                                          <h3 className="text-sm font-bold text-slate-600 mb-4 uppercase tracking-wider text-center">
+                                              {t('recombination')}
+                                              {!isAnimating && visibleLayers >= sortedDist.length && (
                                                 <button
                                                     onClick={handleReplay}
                                                     className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
@@ -282,14 +291,17 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                                     <Play size={10} fill="currentColor" /> {t('replay')}
                                                 </button>
                                             )}
-                                        </h3>
-                                        <div className="flex-1 relative">
-                                            <ResponsiveContainer width="99%" height="100%">
-                                                <BarChart data={binsData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                    <XAxis dataKey="name" />
-                                                    <YAxis />
-                                                    <Tooltip cursor={{ fill: 'transparent' }} content={({ active, payload, label }) => {
+                                          </h3>
+                                          <div className="flex-1 relative">
+                                              {!chartsReady ? (
+                                                  <div className="w-full h-full bg-slate-50 rounded-lg animate-pulse" />
+                                              ) : (
+                                              <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                                                  <BarChart data={binsData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                                                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                      <XAxis dataKey="name" />
+                                                      <YAxis />
+                                                      <Tooltip cursor={{ fill: 'transparent' }} content={({ active, payload, label }) => {
                                                         if (active && payload && payload.length) {
                                                             const bin = payload[0].payload;
                                                             return (
@@ -328,13 +340,14 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                                           />
                                                       ))}
 
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                                                  </BarChart>
+                                              </ResponsiveContainer>
+                                              )}
+                                          </div>
+                                      </div>
+                                  </>
+                              )}
+                          </div>
 
                     </div>
 
