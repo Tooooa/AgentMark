@@ -155,9 +155,44 @@ Open your browser and visit `http://localhost:5173` or `http://127.0.0.1:5173` t
 ### 3. Dataset Setup
 
 #### ToolBench
-1. Download the ToolBench data (queries, tools, and reference answers) from the [official repository](https://github.com/OpenBMB/ToolBench).
-2. Place the unzipped `data` folder into `experiments/toolbench/data/`.
-   - Expected path: `experiments/toolbench/data/data/toolenv/tools`, etc.
+
+> [!IMPORTANT]
+> **ToolBench dataset is required!** You must complete the following steps before running ToolBench experiments, or you will encounter errors due to missing tool definitions and test queries.
+
+**Download Steps:**
+
+1. **Download ToolBench Dataset**
+   
+   Download the complete dataset from [ToolBench Official Repository](https://github.com/OpenBMB/ToolBench), which includes:
+   - `queries`: Test query tasks
+   - `tools`: Tool API definitions (approximately 16,000+ tools)
+   - `reference answers`: Reference answers (for evaluation)
+
+   ```bash
+   # Recommended: Use Git LFS or download directly from Release page
+   # Dataset size: approximately 2-3 GB
+   ```
+
+2. **Place in Correct Directory**
+   
+   Put the unzipped `data` folder into `experiments/toolbench/data/`:
+   
+   ```bash
+   # Expected directory structure
+   AgentMark/
+   └── experiments/
+       └── toolbench/
+           └── data/
+               └── data/           # Unzipped data folder
+                   ├── test_query/
+                   ├── toolenv/
+                   │   └── tools/  # Contains all tool JSON definitions
+                   └── answer/
+   ```
+
+3. **Verify Dataset**
+   
+   Confirm that `experiments/toolbench/data/data/toolenv/tools` contains multiple category subdirectories (e.g., `Search/`, `Social_Media/`, etc.), with tool JSON files in each category.
 
 #### ALFWorld
 The dataset will be downloaded automatically to `~/.cache/alfworld` when needed, or you can manually run:
