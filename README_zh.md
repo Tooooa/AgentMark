@@ -42,9 +42,9 @@
 - [项目结构](#-项目结构)
 - [快速开始](#-快速开始)
   - [1. 环境配置](#1-️-环境配置)
-  - [2. Dashboard 可视化界面](#2-dashboard-可视化界面)
+  - [2. 环境变量配置](#2-环境变量配置)
   - [3. 数据集准备](#3-数据集准备)
-  - [4. 环境变量配置](#4-环境变量配置)
+  - [4. Dashboard 可视化界面](#4-dashboard-可视化界面)
 - [使用我们的插件](#-使用我们的插件)
 - [实验指南](#-实验指南)
   - [1. ToolBench 工具调用实验](#1-toolbench-工具调用实验)
@@ -108,51 +108,17 @@ conda activate AgentMark
 pip install -r requirements.txt
 ```
 
-### 2. Dashboard 可视化界面
+### 2. 环境变量配置
 
-Dashboard 提供了交互式的水印实验界面，包含实时对比、解码分析等功能。
-
-#### 环境要求
-- **Node.js**: 18.0 或更高版本（推荐使用 LTS）
-- **NPM**: 通常随 Node.js 一起安装
-- **Python**: 后端需要 AgentMark 环境
-
-#### 启动步骤
-
-**步骤 1: 启动后端服务**
-
-打开一个终端窗口，运行：
+复制并修改环境变量模板：
 
 ```bash
-# 确保在项目根目录
-conda activate AgentMark
-python dashboard/server/app.py
+cp .env.example .env
+vim .env
+# 填入您的 API Key (OpenAI / DeepSeek 等)
+# 注意：请在 .env 中使用 'export KEY=VALUE' 语法，或运行以下命令使其生效：
+export $(grep -v '^#' .env | xargs)
 ```
-
-成功提示：当您看到 `Uvicorn running on http://0.0.0.0:8000` 时，说明后端已成功启动。
-
-> **注意**: 后端服务默认监听 **8000** 端口。
-
-**步骤 2: 启动前端界面**
-
-打开另一个终端窗口，运行：
-
-```bash
-cd dashboard
-npm install  # 仅首次需要
-npm run dev
-```
-
-终端会显示访问地址，通常为：`http://localhost:5173`
-
-**步骤 3: 访问应用**
-
-打开浏览器，访问 `http://localhost:5173` 或 `http://127.0.0.1:5173` 即可使用 AgentMark Dashboard。
-
-#### 常见问题
-
-- **端口被占用**: 如果 8000 或 5173 端口被占用，请检查是否有其他服务正在运行，或修改配置文件（前端: `dashboard/vite.config.ts`，后端: `dashboard/server/app.py`）。
-- **依赖缺失**: 如果启动后端时报错 `ModuleNotFoundError`，请使用 `pip install <缺少包名>` 安装。
 
 ### 3. 数据集准备
 
@@ -206,17 +172,51 @@ alfworld-download
 > Oasis (社交媒体) 实验需要独立的运行环境 (Python 3.10+)，请参考下方的 [Oasis 社交媒体实验](#3-oasis-社交媒体实验) 章节。
 
 
-### 4. 环境变量配置
+### 4. Dashboard 可视化界面
 
-复制并修改环境变量模板：
+Dashboard 提供了交互式的水印实验界面，包含实时对比、解码分析等功能。
+
+#### 环境要求
+- **Node.js**: 18.0 或更高版本（推荐使用 LTS）
+- **NPM**: 通常随 Node.js 一起安装
+- **Python**: 后端需要 AgentMark 环境
+
+#### 启动步骤
+
+**步骤 1: 启动后端服务**
+
+打开一个终端窗口，运行：
 
 ```bash
-cp .env.example .env
-vim .env
-# 填入您的 API Key (OpenAI / DeepSeek 等)
-# 注意：请在 .env 中使用 'export KEY=VALUE' 语法，或运行以下命令使其生效：
-export $(grep -v '^#' .env | xargs)
+# 确保在项目根目录
+conda activate AgentMark
+python dashboard/server/app.py
 ```
+
+成功提示：当您看到 `Uvicorn running on http://0.0.0.0:8000` 时，说明后端已成功启动。
+
+> **注意**: 后端服务默认监听 **8000** 端口。
+
+**步骤 2: 启动前端界面**
+
+打开另一个终端窗口，运行：
+
+```bash
+cd dashboard
+npm install  # 仅首次需要
+npm run dev
+```
+
+终端会显示访问地址，通常为：`http://localhost:5173`
+
+**步骤 3: 访问应用**
+
+打开浏览器，访问 `http://localhost:5173` 或 `http://127.0.0.1:5173` 即可使用 AgentMark Dashboard。
+
+#### 常见问题
+
+- **端口被占用**: 如果 8000 或 5173 端口被占用，请检查是否有其他服务正在运行，或修改配置文件（前端: `dashboard/vite.config.ts`，后端: `dashboard/server/app.py`）。
+- **依赖缺失**: 如果启动后端时报错 `ModuleNotFoundError`，请使用 `pip install <缺少包名>` 安装。
 
 ---
 

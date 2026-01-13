@@ -42,9 +42,9 @@ The project provides a reproducible, modular, and extensible codebase to evaluat
 - [Project Structure](#-project-structure)
 - [Quick Start](#-quick-start)
   - [1. Environment Setup](#1-️-environment-setup)
-  - [2. Dashboard Visualization](#2-dashboard-visualization)
+  - [2. Environment Variables](#2-environment-variables)
   - [3. Dataset Preparation](#3-dataset-preparation)
-  - [4. Environment Variables](#4-environment-variables)
+  - [4. Dashboard Visualization](#4-dashboard-visualization)
 - [Using Our Plugin](#-using-our-plugin)
 - [Experiment Guide](#-experiment-guide)
   - [1. ToolBench Tool Calling Experiment](#1-toolbench-tool-calling-experiment)
@@ -108,47 +108,17 @@ conda activate AgentMark
 pip install -r requirements.txt
 ```
 
-### 2. Dashboard Visualization
+### 2. Environment Variables
 
-The dashboard provides interactive watermark experiments with real-time comparison and decoding analysis.
-
-#### Requirements
-- **Node.js**: 18.0+ (LTS recommended)
-- **NPM**: comes with Node.js
-- **Python**: backend runs in AgentMark environment
-
-#### Steps
-
-**Step 1: Start backend**
+Copy and edit the environment template:
 
 ```bash
-# Ensure you are in the project root
-conda activate AgentMark
-python dashboard/server/app.py
+cp .env.example .env
+vim .env
+# Fill in your API key (OpenAI / DeepSeek etc.)
+# Use 'export KEY=VALUE' format or apply with:
+export $(grep -v '^#' .env | xargs)
 ```
-
-When you see `Uvicorn running on http://0.0.0.0:8000`, the backend is running.
-
-> **Note**: backend listens on port **8000** by default.
-
-**Step 2: Start frontend**
-
-```bash
-cd dashboard
-npm install  # first time only
-npm run dev
-```
-
-You will see a local URL, typically: `http://localhost:5173`
-
-**Step 3: Open the app**
-
-Visit `http://localhost:5173` or `http://127.0.0.1:5173` in your browser.
-
-#### Common Issues
-
-- **Port in use**: if 8000 or 5173 is occupied, stop the conflicting process or change config (frontend: `dashboard/vite.config.ts`, backend: `dashboard/server/app.py`).
-- **Missing dependency**: if you see `ModuleNotFoundError`, install the missing package with `pip install <package>`.
 
 ### 3. Dataset Preparation
 
@@ -205,17 +175,47 @@ alfworld-download
 > [!NOTE]
 > Oasis (social media) experiments require a separate environment (Python 3.10+). Please refer to the [Oasis Social Media Experiments](#3-oasis-social-media-experiments) section below.
 
-### 4. Environment Variables
+### 4. Dashboard Visualization
 
-Copy and edit the environment template:
+The dashboard provides interactive watermark experiments with real-time comparison and decoding analysis.
+
+#### Requirements
+- **Node.js**: 18.0+ (LTS recommended)
+- **NPM**: comes with Node.js
+- **Python**: backend runs in AgentMark environment
+
+#### Steps
+
+**Step 1: Start backend**
 
 ```bash
-cp .env.example .env
-vim .env
-# Fill in your API key (OpenAI / DeepSeek etc.)
-# Use 'export KEY=VALUE' format or apply with:
-export $(grep -v '^#' .env | xargs)
+# Ensure you are in the project root
+conda activate AgentMark
+python dashboard/server/app.py
 ```
+
+When you see `Uvicorn running on http://0.0.0.0:8000`, the backend is running.
+
+> **Note**: backend listens on port **8000** by default.
+
+**Step 2: Start frontend**
+
+```bash
+cd dashboard
+npm install  # first time only
+npm run dev
+```
+
+You will see a local URL, typically: `http://localhost:5173`
+
+**Step 3: Open the app**
+
+Visit `http://localhost:5173` or `http://127.0.0.1:5173` in your browser.
+
+#### Common Issues
+
+- **Port in use**: if 8000 or 5173 is occupied, stop the conflicting process or change config (frontend: `dashboard/vite.config.ts`, backend: `dashboard/server/app.py`).
+- **Missing dependency**: if you see `ModuleNotFoundError`, install the missing package with `pip install <package>`.
 
 ---
 
