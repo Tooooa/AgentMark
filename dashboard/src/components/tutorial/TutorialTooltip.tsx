@@ -9,6 +9,7 @@ interface TutorialTooltipProps {
     onNext: () => void;
     onSkip: () => void;
     targetRef?: React.RefObject<HTMLElement | null> | null;
+    mode?: 'standard' | 'compare'; // 添加模式属性
 }
 
 const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
@@ -17,7 +18,8 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
     totalSteps,
     onNext,
     onSkip,
-    targetRef
+    targetRef,
+    mode = 'standard' // 默认为standard模式
 }) => {
     const [position, setPosition] = React.useState({ top: 0, left: 0 });
     const [arrowPosition, setArrowPosition] = React.useState<'top' | 'bottom' | 'left' | 'right'>('top');
@@ -26,61 +28,151 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
     React.useEffect(() => {
         if (targetRef?.current && isOpen) {
             const rect = targetRef.current.getBoundingClientRect();
+            console.log('Tutorial tooltip - mode:', mode, 'step:', step);
+            console.log('  rect.top:', rect.top, 'rect.left:', rect.left, 'rect.right:', rect.right, 'rect.bottom:', rect.bottom);
+            console.log('  rect.width:', rect.width, 'rect.height:', rect.height);
             
             // 根据步骤决定提示框位置
             let tooltipTop = 0;
             let tooltipLeft = 0;
             let arrow: 'top' | 'bottom' | 'left' | 'right' = 'top';
 
-            switch (step) {
-                case 1: // 设置按钮 - 下方
-                    tooltipTop = rect.bottom + 15;
-                    tooltipLeft = rect.left - 80;
-                    arrow = 'top';
-                    break;
-                case 2: // 信道噪声 - 左侧
-                    tooltipTop = rect.top;
-                    tooltipLeft = rect.left - 315;
-                    arrow = 'right';
-                    break;
-                case 3: // 模式切换 - 右侧
-                    tooltipTop = rect.top;
-                    tooltipLeft = rect.right + 15;
-                    arrow = 'left';
-                    break;
-                case 4: // 提示词输入框 - 上方
-                    tooltipTop = rect.top - 210;
-                    tooltipLeft = rect.left + rect.width / 2 - 150;
-                    arrow = 'bottom';
-                    break;
+            if (mode === 'compare') {
+                // Compare模式的位置计算
+                switch (step) {
+                    case 1: // EVALUATING区域 - 屏幕中间偏右
+                        tooltipTop = rect.top + 40;
+                        tooltipLeft = rect.left + 30;
+                        arrow = 'left';
+                        break;
+                    case 2: // Utility Monitor - 右侧
+                        tooltipTop = rect.top + 10;
+                        tooltipLeft = rect.right + 30;
+                        arrow = 'left';
+                        break;
+                    case 3: // Chart柱状图 - 左侧
+                        tooltipTop = rect.top + 50;
+                        tooltipLeft = rect.left - 320;
+                        arrow = 'right';
+                        break;
+                }
+            } else {
+                // Standard模式的位置计算
+                switch (step) {
+                    case 1: // 设置按钮 - 下方
+                        tooltipTop = rect.bottom + 15;
+                        tooltipLeft = rect.left - 80;
+                        arrow = 'top';
+                        break;
+                    case 2: // 信道噪声 - 左侧
+                        tooltipTop = rect.top;
+                        tooltipLeft = rect.left - 315;
+                        arrow = 'right';
+                        break;
+                    case 3: // 模式切换 - 右侧
+                        tooltipTop = rect.top;
+                        tooltipLeft = rect.right + 15;
+                        arrow = 'left';
+                        break;
+                    case 4: // 提示词输入框 - 上方
+                        tooltipTop = rect.top - 210;
+                        tooltipLeft = rect.left + rect.width / 2 - 150;
+                        arrow = 'bottom';
+                        break;
+                }
             }
 
+            // 边界检查：防止提示框超出屏幕
+            const tooltipWidth = 300; // 提示框宽度
+            const tooltipHeight = 250; // 提示框大致高度
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+
+            console.log('  screen size:', screenWidth, 'x', screenHeight);
+            console.log('  before boundary check - top:', tooltipTop, 'left:', tooltipLeft, 'arrow:', arrow);
+
+            // 如果右侧放不下，改为左侧
+            if (arrow === 'left' && tooltipLeft + tooltipWidth > screenWidth) {
+                tooltipLeft = rect.left - tooltipWidth - 15;
+                arrow = 'right';
+                console.log('  adjusted to left side');
+            }
+
+            // 如果左侧放不下，保持原样或调整
+            if (arrow === 'right' && tooltipLeft < 0) {
+                tooltipLeft = 15;
+                console.log('  adjusted left position to avoid negative');
+            }
+
+            // 如果位置在屏幕外（负数或太大），强制显示在屏幕中央
+            if (tooltipTop < 0) {
+                tooltipTop = 100;
+                console.log('  adjusted top to avoid being above screen');
+            }
+            if (tooltipLeft < 0) {
+                tooltipLeft = 50;
+                console.log('  adjusted left to avoid being left of screen');
+            }
+
+            // 如果下方放不下，改为上方
+            if (arrow === 'top' && tooltipTop + tooltipHeight > screenHeight) {
+                tooltipTop = rect.top - tooltipHeight - 15;
+                if (tooltipTop < 0) tooltipTop = 100; // 再次检查
+                arrow = 'bottom';
+                console.log('  adjusted to top side');
+            }
+
+            // 如果右侧放不下
+            if (tooltipLeft + tooltipWidth > screenWidth) {
+                tooltipLeft = screenWidth - tooltipWidth - 15;
+                console.log('  adjusted left to fit screen width');
+            }
+
+            console.log('  calculated position - top:', tooltipTop, 'left:', tooltipLeft, 'arrow:', arrow);
             setPosition({ top: tooltipTop, left: tooltipLeft });
             setArrowPosition(arrow);
         }
-    }, [targetRef, isOpen, step]);
+    }, [targetRef, isOpen, step, mode]);
 
     const getTooltipContent = () => {
-        const content = {
-            1: {
-                zh: '点击设置按钮可以配置系统参数，包括 API Key、载荷内容（Payload）和自定义查询等。您可以在模拟模式和实时模式之间切换。',
-                en: 'Click the Settings button to configure system parameters, including API Key, Payload content, and custom queries. You can switch between Simulation mode and Live mode.'
-            },
-            2: {
-                zh: '信道噪声控制用于模拟网络丢包情况。拖动滑块调整丢包率（0-50%），观察水印解码在不同噪声环境下的鲁棒性表现。',
-                en: 'Channel Noise control simulates network packet loss. Drag the slider to adjust loss rate (0-50%) and observe watermark decoding robustness under different noise conditions.'
-            },
-            3: {
-                zh: 'Standard 模式用于查看单个对话的完整执行流程；Compare 模式可以对比两个模型的输出结果，并进行评估打分。',
-                en: 'Standard mode displays the complete execution flow of a single conversation; Compare mode allows comparison between two model outputs with evaluation scoring.'
-            },
-            4: {
-                zh: '在提示词输入框中输入新的指令，可以继续与 Agent 进行多轮对话。系统会实时显示每一步的执行过程和水印嵌入情况。',
-                en: 'Enter new prompts in the input box to continue multi-turn conversations with the Agent. The system displays real-time execution steps and watermark embedding status.'
-            }
-        };
-        
-        return content[step as keyof typeof content]?.[locale] || '';
+        if (mode === 'compare') {
+            const compareContent = {
+                1: {
+                    zh: '此区域显示评估结果，展示基线模型（Original）和带水印模型（Ours）的得分对比。点击下方的"开始评估"按钮可进行自动评估。',
+                    en: 'This area displays evaluation results, showing score comparison between the baseline model (Original) and watermarked model (Ours). Click "Start Evaluation" below to perform automatic evaluation.'
+                },
+                2: {
+                    zh: 'Utility Monitor 监控区域显示系统性能指标，包括 Token 吞吐量和步骤延迟等关键数据，帮助您了解水印对性能的影响。',
+                    en: 'Utility Monitor displays system performance metrics, including Token throughput and step latency, helping you understand the performance impact of watermarking.'
+                },
+                3: {
+                    zh: '柱状图展示采样概率分布的差异。点击柱状图可查看详细的概率分布对比，了解水印如何影响模型的输出分布。',
+                    en: 'The bar chart shows sampling probability distribution differences. Click on the chart to view detailed probability distribution comparison and understand how watermarking affects model output distribution.'
+                }
+            };
+            return compareContent[step as keyof typeof compareContent]?.[locale] || '';
+        } else {
+            const content = {
+                1: {
+                    zh: '点击设置按钮可以配置系统参数，包括 API Key、载荷内容（Payload）和自定义查询等。您可以在模拟模式和实时模式之间切换。',
+                    en: 'Click the Settings button to configure system parameters, including API Key, Payload content, and custom queries. You can switch between Simulation mode and Live mode.'
+                },
+                2: {
+                    zh: '信道噪声控制用于模拟网络丢包情况。拖动滑块调整丢包率（0-50%），观察水印解码在不同噪声环境下的鲁棒性表现。',
+                    en: 'Channel Noise control simulates network packet loss. Drag the slider to adjust loss rate (0-50%) and observe watermark decoding robustness under different noise conditions.'
+                },
+                3: {
+                    zh: 'Standard 模式用于查看单个对话的完整执行流程；Compare 模式可以对比两个模型的输出结果，并进行评估打分。',
+                    en: 'Standard mode displays the complete execution flow of a single conversation; Compare mode allows comparison between two model outputs with evaluation scoring.'
+                },
+                4: {
+                    zh: '在提示词输入框中输入新的指令，可以继续与 Agent 进行多轮对话。系统会实时显示每一步的执行过程和水印嵌入情况。',
+                    en: 'Enter new prompts in the input box to continue multi-turn conversations with the Agent. The system displays real-time execution steps and watermark embedding status.'
+                }
+            };
+            
+            return content[step as keyof typeof content]?.[locale] || '';
+        }
     };
 
     return (

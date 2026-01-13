@@ -76,12 +76,22 @@ function AppContent() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(1);
   
+  // Compare模式教程状态
+  const [hasCompletedCompareTutorial, setHasCompletedCompareTutorial] = useState(false);
+  const [showCompareTutorial, setShowCompareTutorial] = useState(false);
+  const [compareTutorialStep, setCompareTutorialStep] = useState(1);
+  
   // 引导目标元素的ref
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const channelNoiseRef = useRef<HTMLDivElement>(null);
   const modeToggleRef = useRef<HTMLDivElement>(null);
   const promptInputRef = useRef<HTMLInputElement>(null);
   const decoderProgressRef = useRef<HTMLDivElement>(null);
+  
+  // Compare模式教程refs
+  const evaluationRef = useRef<HTMLDivElement>(null);
+  const utilityMonitorRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // Filter scenarios based on search query
   const filteredScenarios = useMemo(() => {
@@ -151,6 +161,33 @@ function AppContent() {
     }
   };
 
+  // 处理Compare模式教程下一步
+  const handleCompareTutorialNext = () => {
+    if (compareTutorialStep < 3) {
+      setCompareTutorialStep(compareTutorialStep + 1);
+    } else {
+      setShowCompareTutorial(false);
+      setCompareTutorialStep(1);
+      setHasCompletedCompareTutorial(true);
+    }
+  };
+
+  // 处理Compare模式教程跳过
+  const handleCompareTutorialSkip = () => {
+    setShowCompareTutorial(false);
+    setHasCompletedCompareTutorial(true);
+  };
+
+  // 获取Compare模式当前步骤的目标ref
+  const getCurrentCompareTutorialRef = () => {
+    switch (compareTutorialStep) {
+      case 1: return evaluationRef;
+      case 2: return utilityMonitorRef;
+      case 3: return chartRef;
+      default: return null;
+    }
+  };
+
   // 初次进入主页面时自动弹出设置窗口
   useEffect(() => {
     if (hasStarted && isFirstEntry) {
@@ -171,6 +208,17 @@ function AppContent() {
       }, 500);
     }
   }, [isSettingsModalOpen, isFirstEntry, hasCompletedTutorial, showTutorial, tutorialStep]);
+
+  // 首次切换到Compare模式时启动Compare教程（仅当有活动对话时）
+  useEffect(() => {
+    const hasActiveConversation = !!sessionId || (activeScenario.steps && activeScenario.steps.length > 0);
+    if (isComparisonMode && hasActiveConversation && !hasCompletedCompareTutorial && !showCompareTutorial && compareTutorialStep === 1) {
+      setTimeout(() => {
+        setShowCompareTutorial(true);
+      }, 500);
+    }
+  }, [isComparisonMode, sessionId, activeScenario.steps, hasCompletedCompareTutorial, showCompareTutorial, compareTutorialStep]);
+
 
   // 移除自动初始化逻辑，由用户在设置中明确点击“应用”来启动会话
   // useEffect(() => {
@@ -232,6 +280,8 @@ function AppContent() {
       
       // Tutorial ref
       modeToggleRef={modeToggleRef}
+      utilityMonitorRef={utilityMonitorRef}
+      chartRef={chartRef}
     />
   );
 
@@ -271,6 +321,9 @@ function AppContent() {
                       scenarioId={activeScenario.id}
                       evaluationResult={evaluationResult}
                       userQuery={customQuery || activeScenario.userQuery}
+                      evaluationRef={evaluationRef}
+                      utilityMonitorRef={utilityMonitorRef}
+                      chartRef={chartRef}
                     />
                   </div>
                 </div>
@@ -354,6 +407,17 @@ function AppContent() {
           onNext={handleTutorialNext}
           onSkip={handleTutorialSkip}
           targetRef={getCurrentTutorialRef()}
+        />
+
+        {/* Compare模式教程 */}
+        <TutorialTooltip
+          isOpen={showCompareTutorial}
+          step={compareTutorialStep}
+          totalSteps={3}
+          onNext={handleCompareTutorialNext}
+          onSkip={handleCompareTutorialSkip}
+          targetRef={getCurrentCompareTutorialRef()}
+          mode="compare"
         />
 
         {/* Full Screen History View Modal */}

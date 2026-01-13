@@ -106,7 +106,7 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                         />
 
                         {/* 箭头指引：从解码进度（右上方）指向提示框 */}
-                        <motion.div
+                        {/* <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -120,7 +120,6 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                             }}
                         >
                             <svg width="600" height="500" className="absolute inset-0" style={{ overflow: 'visible' }}>
-                                {/* 直线路径 */}
                                 <path
                                     d="M 560 20 L 70 290"
                                     stroke="#6366f1"
@@ -128,7 +127,6 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                                     fill="none"
                                     markerEnd="url(#arrowhead)"
                                 />
-                                {/* 箭头定义 */}
                                 <defs>
                                     <marker
                                         id="arrowhead"
@@ -142,7 +140,7 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                                     </marker>
                                 </defs>
                             </svg>
-                        </motion.div>
+                        </motion.div> */}
 
                         {/* 提示框 */}
                         <motion.div

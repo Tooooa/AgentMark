@@ -11,6 +11,9 @@ interface ComparisonViewProps {
     scenarioId?: string;
     evaluationResult?: { model_a_score: number, model_b_score: number, reason: string } | null;
     userQuery?: string;
+    evaluationRef?: React.RefObject<HTMLDivElement>;
+    utilityMonitorRef?: React.RefObject<HTMLDivElement>;
+    chartRef?: React.RefObject<HTMLDivElement>;
 }
 
 // 1221: Segment structure for aligning user questions
@@ -20,7 +23,7 @@ interface Segment {
     userInput?: Step; // The user_input step that ends this segment (if any)
 }
 
-const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedIndices, scenarioId, evaluationResult, userQuery }) => {
+const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedIndices, scenarioId, evaluationResult, userQuery, evaluationRef, utilityMonitorRef, chartRef }) => {
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -119,31 +122,36 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedInd
 
     return (
         <div className="h-full flex flex-col gap-4">
-            {/* Header */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-indigo-100 text-indigo-900">
-                <Columns size={20} />
-                <h2 className="font-bold">Comparison Mode (Contrast View)</h2>
-                <div className="ml-auto flex gap-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    <span className="flex items-center gap-1"><EyeOff size={14} /> Base Model</span>
-                    <span className="flex items-center gap-1"><Eye size={14} className="text-indigo-600" /> Watermarked</span>
-                </div>
-            </div>
-
             {/* Scores Header */}
-            {evaluationResult && (
-                <div className="grid grid-cols-2 gap-6 px-2">
-                    <div className="flex justify-center">
-                        <span className="text-xs font-bold text-slate-500 bg-white px-3 py-1 rounded border border-slate-200 shadow-sm">
-                            Score: {evaluationResult.model_a_score.toFixed(1)}
-                        </span>
-                    </div>
-                    <div className="flex justify-center">
-                        <span className="text-xs font-bold text-indigo-600 bg-white px-3 py-1 rounded border border-indigo-100 shadow-sm">
-                            Score: {evaluationResult.model_b_score.toFixed(1)}
-                        </span>
-                    </div>
-                </div>
-            )}
+            <div ref={evaluationRef} className="grid grid-cols-2 gap-6 px-2">
+                {evaluationResult ? (
+                    <>
+                        <div className="flex justify-center">
+                            <span className="text-xs font-bold text-slate-500 bg-white px-3 py-1 rounded border border-slate-200 shadow-sm">
+                                Score: {evaluationResult.model_a_score.toFixed(1)}
+                            </span>
+                        </div>
+                        <div className="flex justify-center">
+                            <span className="text-xs font-bold text-indigo-600 bg-white px-3 py-1 rounded border border-indigo-100 shadow-sm">
+                                Score: {evaluationResult.model_b_score.toFixed(1)}
+                            </span>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex justify-center">
+                            <span className="text-xs font-bold text-slate-400 bg-white px-3 py-1 rounded border border-slate-200 shadow-sm">
+                                Score: -
+                            </span>
+                        </div>
+                        <div className="flex justify-center">
+                            <span className="text-xs font-bold text-slate-400 bg-white px-3 py-1 rounded border border-slate-200 shadow-sm">
+                                Score: -
+                            </span>
+                        </div>
+                    </>
+                )}
+            </div>
 
             {/* Main Content - Single scrollable container with aligned segments */}
             <div 
@@ -199,7 +207,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ visibleSteps, erasedInd
                                 </div>
 
                                 {/* Right: Watermarked steps */}
-                                <div className="space-y-4 p-2 bg-white rounded-xl border border-indigo-100">
+                                <div ref={segIndex === 0 ? chartRef : undefined} className="space-y-4 p-2 bg-white rounded-xl border border-indigo-100">
                                     {segment.watermarkedSteps.length > 0 ? (
                                         segment.watermarkedSteps.map((step, stepIdx) => (
                                             <StepCard

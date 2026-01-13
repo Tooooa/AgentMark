@@ -38,6 +38,8 @@ interface ControlPanelProps {
     onRefreshHistory?: () => void;
     onDeleteScenario?: (id: string) => void;
     setIsHistoryViewOpen?: (open: boolean) => void;
+    utilityMonitorRef?: React.RefObject<HTMLDivElement | null>;
+    chartRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -68,6 +70,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
     onRefreshHistory,
     onDeleteScenario,
     setIsHistoryViewOpen,
+    utilityMonitorRef,
+    chartRef
 }) => {
     const { t, locale, setLocale } = useI18n();
 
@@ -310,7 +314,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     )}
 
                     {/* Utility Monitor Card (Fills remaining space) */}
-                    <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col min-h-0">
+                    <div ref={utilityMonitorRef} className="flex-1 bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col min-h-0">
                         <div className="flex items-center gap-2 text-indigo-900 border-b border-indigo-50 pb-2 mb-3 shrink-0">
                             <Activity size={16} />
                             <h3 className="font-bold text-xs uppercase tracking-wide">Utility Monitor</h3>
@@ -318,7 +322,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
                         <div className="flex-1 flex flex-col gap-2 min-h-0 overflow-y-auto pr-1">
                             {/* Token Chart */}
-                            <div className="flex-1 min-h-[100px] flex flex-col">
+                            <div ref={chartRef} className="flex-1 min-h-[100px] flex flex-col">
                                 <div className="flex justify-between items-center mb-1 shrink-0">
                                     <span className="text-[10px] font-semibold text-slate-500">Token Throughput</span>
                                     <div className="flex gap-2 text-[8px]">
