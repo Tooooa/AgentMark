@@ -9,6 +9,7 @@ interface FlowFeedProps {
     visibleSteps: Step[];
     erasedIndices: Set<number>;
     userQuery: string;
+    agentPromptPreview?: string;
     onContinue?: (prompt: string) => void;
     isPlaying?: boolean;
     onTogglePlay?: () => void;
@@ -16,7 +17,17 @@ interface FlowFeedProps {
     promptInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
-const FlowFeed: React.FC<FlowFeedProps> = ({ visibleSteps, erasedIndices, userQuery, onContinue, isPlaying, onTogglePlay, scenarioId, promptInputRef }) => {
+const FlowFeed: React.FC<FlowFeedProps> = ({
+    visibleSteps,
+    erasedIndices,
+    userQuery,
+    agentPromptPreview,
+    onContinue,
+    isPlaying,
+    onTogglePlay,
+    scenarioId,
+    promptInputRef
+}) => {
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const isAtBottomRef = useRef(true);
@@ -240,6 +251,16 @@ const FlowFeed: React.FC<FlowFeedProps> = ({ visibleSteps, erasedIndices, userQu
                                     </button>
                                 )}
                             </div>
+                            {agentPromptPreview && (
+                                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                                        {locale === 'zh' ? 'PROMPT 预览' : 'Prompt Preview'}
+                                    </div>
+                                    <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                                        {agentPromptPreview}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

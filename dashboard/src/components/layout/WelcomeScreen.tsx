@@ -5,9 +5,10 @@ import { useI18n } from '../../i18n/I18nContext';
 import { api } from '../../services/api';
 import { scenarios as presetScenarios } from '../../data/mockData';
 import type { Trajectory } from '../../data/mockData';
+import AddAgentModal from '../modals/AddAgentModal';
 
 interface WelcomeScreenProps {
-    onStart: (config: { scenarioId: string; payload: string; erasureRate: number; query?: string }) => void;
+    onStart: (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; agentPromptPreview?: string }) => void;
     initialScenarioId: string;
     initialErasureRate: number;
     isLiveMode: boolean;
@@ -37,6 +38,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
     const [payload, setPayload] = useState('1101');
     const [erasureRate] = useState(initialErasureRate);
+    const [showAddAgentModal, setShowAddAgentModal] = useState(false);
+    const [agentRepoUrl, setAgentRepoUrl] = useState('');
+    const [agentUserInput, setAgentUserInput] = useState('');
 
     // Combine preset scenarios with history
     const allScenarios = useMemo(() => {
@@ -76,8 +80,27 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             scenarioId: '', // 空字符串表示不选择任何预设场景
             payload: payload,
             erasureRate: erasureRate,
-            query: '' // 空查询
+            query: '', // 空查询
+            agentPromptPreview: ''
         });
+    };
+
+    const handleAddAgentApply = (data: { repoUrl: string; apiKey: string; userInput: string }) => {
+        const trimmedInput = data.userInput.trim();
+        const wrappedPrompt = trimmedInput
+            ? `I am a specialized assistant, and I need to answer the following user request: ${trimmedInput}`
+            : '';
+        setApiKey(data.apiKey);
+        setAgentRepoUrl(data.repoUrl);
+        setAgentUserInput(data.userInput);
+        onStart({
+            scenarioId: 'custom',
+            payload,
+            erasureRate,
+            query: wrappedPrompt,
+            agentPromptPreview: wrappedPrompt
+        });
+        setShowAddAgentModal(false);
     };
 
     const isFlipped = false; // 不再翻转
@@ -133,6 +156,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                 onClick={() => {
                                     if (isToolCard) {
                                         handleToolUseClick();
+                                    } else if (mode.id === 'add') {
+                                        setShowAddAgentModal(true);
                                     } else if (!isActive) {
                                         setSelectedMode(mode.id as Mode);
                                     }
@@ -338,12 +363,22 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                             </div>
                                         </div>
                                     )}
+
                                 </motion.div>
                             </motion.div>
                         );
                     })}
                 </AnimatePresence>
             </div>
+
+            <AddAgentModal
+                isOpen={showAddAgentModal}
+                onClose={() => setShowAddAgentModal(false)}
+                apiKey={apiKey}
+                repoUrl={agentRepoUrl}
+                userInput={agentUserInput}
+                onApply={handleAddAgentApply}
+            />
         </div>
     );
 };

@@ -15,8 +15,8 @@ from agentmark.sdk import AgentWatermarker
 PROMPT_INSTRUCTION = """You MUST return ONLY JSON with your probability over all candidate actions.
 Example:
 {
-  "action_weights": {"Action1": 0.8, "Action2": 0.15, "Action3": 0.05},
-  "action_args": {"Action1": {}, "Action2": {}, "Action3": {}},
+  "action_weights": {"Action1": 0.5, "Action2": 0.3, "Action3": 0.2},
+  "action_args": {"Action1": {"arg": "value"}, "Action2": {"arg": "value"}, "Action3": {"arg": "value"}},
   "thought": "brief reasoning"
 }
 Requirements:

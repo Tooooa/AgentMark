@@ -122,13 +122,16 @@ function AppContent() {
   // Actually, let's just use the hook's payload directly for DecoderPanel too, 
   // but DecoderPanel prop is 'targetPayload'.
 
-  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number; query?: string }) => {
+  const [agentPromptPreview, setAgentPromptPreview] = useState('');
+
+  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; agentPromptPreview?: string }) => {
     setActiveScenarioId(config.scenarioId);
     if (config.query) {
       setCustomQuery(config.query);
     } else {
       setCustomQuery(""); // Reset if not custom
     }
+    setAgentPromptPreview(config.agentPromptPreview || '');
     setPayload(config.payload); // Sync to hook
     setErasureRate(config.erasureRate);
     // Note: setHasStarted logic will trigger the effect below
@@ -341,10 +344,11 @@ function AppContent() {
                 <MainLayout
                   left={commonControlPanel}
                   middle={
-                    <FlowFeed
+                      <FlowFeed
                       visibleSteps={visibleSteps}
                       erasedIndices={erasedIndices}
                       userQuery={customQuery || activeScenario.userQuery}
+                      agentPromptPreview={agentPromptPreview}
                       onContinue={handleContinue}
                       isPlaying={isPlaying}
                       onTogglePlay={() => setIsPlaying(!isPlaying)}
