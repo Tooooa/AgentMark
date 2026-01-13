@@ -233,7 +233,7 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                             <div className="w-full h-full bg-slate-50 rounded-lg animate-pulse" />
                                         ) : (
                                         <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                                            <BarChart data={decompositionData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                                            <BarChart data={decompositionData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                 <XAxis
                                                     dataKey="name"
@@ -261,7 +261,7 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                               {mode === 'watermarked' && decompositionData.slice(0, MAX_REFERENCE_LINES).map((d, i) => (
                                                   <ReferenceLine key={`line-${i}`} y={d.prob} stroke="#94a3b8" strokeDasharray="4 4" label={{ position: 'right', value: `P${i + 1}`, fontSize: 10, fill: '#94a3b8' }} />
                                               ))}
-                                                <Bar dataKey="prob" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                                                <Bar dataKey="prob" radius={[4, 4, 0, 0]} isAnimationActive={false} maxBarSize={mode === 'baseline' ? 100 : 80}>
                                                     {decompositionData.map((_, i) => (
                                                         <Cell key={i} fill={getRankColor(i)} />
                                                     ))}
@@ -332,19 +332,25 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
 
                                                     {/* Render Stacked Bars - Animated */}
                                                     {/* We stack up to max K. Max K is sortedDist.length */}
-                                                      {sortedDist.slice(0, visibleLayers).map((_, i) => (
-                                                          <Bar
-                                                              key={`stack-${i}`}
-                                                              dataKey={`Action_${i + 1}`}
-                                                              stackId="a"
-                                                              fill={getRankColor(i)}
-                                                              stroke="white"
-                                                              strokeWidth={1}
+                                                    {sortedDist.slice(0, visibleLayers).map((_, i) => (
+                                                        <Bar
+                                                            key={`stack-${i}`}
+                                                            dataKey={`Action_${i + 1}`}
+                                                            stackId="a"
+                                                            fill={getRankColor(i)}
+                                                            stroke="white"
+                                                            strokeWidth={1}
                                                             maxBarSize={80}
-                                      </div>
-                                  </>
-                              )}
-                          </div>
+                                                        />
+                                                    ))}
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
 
                     </div>
 

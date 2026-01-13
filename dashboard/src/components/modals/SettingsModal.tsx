@@ -139,22 +139,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   </div>
                               )}
 
-                              {/* Custom Query */}
-                              {isLiveMode && (
-                                  <div>
-                                      <label className="block text-sm font-bold text-slate-700 mb-2">
-                                          {locale === 'zh' ? '自定义问题' : 'Custom Query'}
-                                      </label>
-                                      <textarea
-                                          value={customQuery}
-                                          onChange={(e) => setCustomQuery(e.target.value)}
-                                          placeholder={locale === 'zh' ? '输入你的问题…' : 'Enter your query…'}
-                                          rows={4}
-                                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm"
-                                      />
-                                  </div>
-                              )}
-
                             {/* Payload */}
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-2">
