@@ -49,6 +49,23 @@ export const useSimulation = () => {
         refreshScenarios();
     }, [refreshScenarios]);
 
+    // Sync liveScenario to savedScenarios for real-time updates in history list
+    useEffect(() => {
+        if (liveScenario && liveScenario.id) {
+            setSavedScenarios(prev => {
+                const index = prev.findIndex(s => s.id === liveScenario.id);
+                if (index >= 0) {
+                    // Update existing scenario
+                    const updated = [...prev];
+                    updated[index] = liveScenario;
+                    return updated;
+                }
+                // If not found, it might be a new scenario that hasn't been saved yet
+                return prev;
+            });
+        }
+    }, [liveScenario]);
+
     const allScenarios = useMemo(() => {
         // Always merge saved scenarios with mock scenarios
         // Saved scenarios (real history) come first
