@@ -150,8 +150,8 @@ You have access to the following tools:
 {json.dumps(tool_summaries, indent=2)}
 
 You must respond in JSON format with 'thought', 'action', 'action_args', and 'action_weights'.
-'action_weights' must be a JSON object mapping EVERY valid action to a non-negative number (not necessarily normalized; the server will normalize them to sum to 1).
-IMPORTANT: Do NOT return a one-hot distribution (e.g., only one action has non-zero weight). Assign non-zero weight to multiple actions (at least 3 when possible) to reflect uncertainty.
+'action_weights' must be a JSON object mapping EVERY valid action to a STRICTLY POSITIVE number (> 0, not necessarily normalized; the server will normalize them to sum to 1).
+IMPORTANT: Do NOT output zeros. Every valid action must have weight > 0 (use small values like 1e-3 if needed).
 Valid actions are: {json.dumps(admissible_commands)}
 If you have enough information, use "Finish" and provide the final answer in "action_args" as {{"final_answer": "your answer"}}.
 """
@@ -220,24 +220,31 @@ def extract_and_normalize_probabilities(output: str, candidates: List[str]) -> D
     raw_weights = data.get("action_weights", None)
     if raw_weights is not None:
         weights: Dict[str, float] = {}
+        valid = True
 
         if isinstance(raw_weights, dict):
             for c in candidates:
+                if c not in raw_weights:
+                    valid = False
+                    break
+            for c in candidates:
                 weights[c] = _coerce_nonneg_float(raw_weights.get(c, 0.0))
+                if weights[c] <= 0.0:
+                    valid = False
+                    break
         elif isinstance(raw_weights, list) and len(raw_weights) == len(candidates):
             for i, c in enumerate(candidates):
                 weights[c] = _coerce_nonneg_float(raw_weights[i])
+                if weights[c] <= 0.0:
+                    valid = False
+                    break
         else:
-            weights = {}
+            valid = False
 
-        total = sum(weights.values())
-        if total > 0.0:
-            normalized = {k: v / total for k, v in weights.items()}
-            # Treat near-one-hot as invalid: it collapses UI bins and usually indicates the model ignored instructions.
-            support = sum(1 for p in normalized.values() if p > 1e-9)
-            if support < 2:
-                return _geometric_fallback(chosen if chosen in candidates else None)
-            return normalized
+        if valid:
+            total = sum(weights.values())
+            if total > 0.0:
+                return {k: v / total for k, v in weights.items()}
 
     return _geometric_fallback(chosen if chosen in candidates else None)
 
