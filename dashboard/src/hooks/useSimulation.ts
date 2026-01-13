@@ -686,10 +686,11 @@ export const useSimulation = () => {
             }
 
             // Inject User Step locally for display (Optimistic UI)
+            // User input doesn't get a real stepIndex to avoid disrupting agent step numbering
             setLiveScenario(prev => {
                 if (!prev) return null; // Should not happen if restored above
                 const userStep: Step = {
-                    stepIndex: prev.steps.length,
+                    stepIndex: -1, // Special index for user input, won't be displayed
                     thought: prompt,
                     action: "",
                     distribution: [],
