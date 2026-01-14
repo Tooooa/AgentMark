@@ -132,8 +132,9 @@ export const useSimulation = () => {
             setEvaluationResult(activeScenario.evaluation);
         } else {
             setEvaluationResult(null);
+            // Only close modal when evaluation result is cleared (scenario changed)
+            setIsEvaluationModalOpen(false);
         }
-        setIsEvaluationModalOpen(false);
     }, [activeScenarioId, activeScenario]); // Re-run if scenario content updates (e.g. after eval)
 
     // Auto-load history when clicking on a saved scenario
