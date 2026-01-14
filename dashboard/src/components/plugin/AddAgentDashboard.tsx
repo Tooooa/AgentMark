@@ -282,13 +282,15 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                     )}
                 </>
             )}
-            <button
-                onClick={handleNewChat}
-                className="w-full py-3.5 px-4 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 tracking-wide group"
-            >
-                <PlusCircle size={18} className="text-amber-600 group-hover:text-amber-700" />
-                {locale === 'zh' ? '新对话' : 'New Chat'}
-            </button>
+            {!isComparisonMode && (
+                <button
+                    onClick={handleNewChat}
+                    className="w-full py-3.5 px-4 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 tracking-wide group"
+                >
+                    <PlusCircle size={18} className="text-amber-600 group-hover:text-amber-700" />
+                    {locale === 'zh' ? '新对话' : 'New Chat'}
+                </button>
+            )}
 
             <div className="h-60 bg-white/80 rounded-2xl shadow-[0_25px_60px_-35px_rgba(15,23,42,0.45)] border border-amber-100/70 ring-1 ring-amber-100/60 overflow-hidden flex flex-col shrink-0">
                 <div className="p-3 border-b border-amber-100/70 bg-amber-50/60 flex items-center justify-between">
