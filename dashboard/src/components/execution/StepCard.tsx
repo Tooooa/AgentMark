@@ -209,7 +209,7 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                                     <div className="bg-indigo-50/50 rounded-lg p-1.5 flex items-center justify-between text-[10px] text-slate-500 font-mono border border-indigo-50">
                                         <div className="flex items-center gap-1.5">
                                             <div className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">
-                                                PAYLOAD {step.watermark.bits}
+                                                {locale === 'zh' ? '载荷' : 'PAYLOAD'} {step.watermark.bits}
                                             </div>
                                             <span>{locale === 'zh' ? '排序切片' : 'Sort & Slice'}</span>
                                             <ArrowRight size={8} />
