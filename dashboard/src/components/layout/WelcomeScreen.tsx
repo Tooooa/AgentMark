@@ -81,8 +81,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         // When scrolling, we can optionally auto-select the mode or wait for click
         // For now, let's just keep 'tool' expansion manual, but 'self' and 'add' visual selection syncs
         if (selectedMode !== 'tool') {
-             // Maybe we don't want to auto-set selectedMode as it triggers expansions?
-             // Let's keep separation: activeIndex is for "highlight/focus", click is for "select/expand"
+            // Maybe we don't want to auto-set selectedMode as it triggers expansions?
+            // Let's keep separation: activeIndex is for "highlight/focus", click is for "select/expand"
         }
     }, [activeIndex, selectedMode]);
 
@@ -131,25 +131,28 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 </motion.div>
 
                 {/* Right Side - Scrollable Selection Layer */}
-                <div 
+                <div
                     id="right-side-container"
                     ref={containerRef}
                     className="flex-1 h-full relative"
                     onWheel={handleWheel}
                 >
                     {/* Artistic Background Layer */}
-                    <div 
+                    <div
                         className="absolute inset-y-0 right-0 w-[120%] bg-white/40 backdrop-blur-xl shadow-2xl z-0 border-l border-white/50"
                         style={{
                             borderRadius: '50% 0 0 50% / 100% 0 0 100%', // Large arc shape
-                            left: '10%'
+                            left: '22%'
                         }}
                     />
 
                     {/* Scrollable Items Container Wrapper for Vertically Centering Active Item */}
-                    <div className="absolute inset-0 z-10 overflow-hidden flex items-center justify-center pointer-events-none">
-                        <motion.div 
-                            className="flex flex-col items-start gap-12 pointer-events-auto pl-32 relative"
+                    <div
+                        className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none"
+                        style={{ clipPath: 'inset(0 -100% 0 0)' }}
+                    >
+                        <motion.div
+                            className="flex flex-col items-start gap-12 pointer-events-auto pl-[26rem] relative"
                             animate={{
                                 y: (1 - activeIndex) * 200 // Shift entire list to keep active item centered. 200 is approx step height
                             }}
@@ -173,8 +176,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                         key={mode.id}
                                         layout
                                         initial={false}
-                                        animate={{ 
-                                            scale: isActive ? 1.05 : 0.85, 
+                                        animate={{
+                                            scale: isActive ? 1.05 : 0.85,
                                             opacity: isActive ? 1 : 0.4,
                                             x: isActive ? 0 : 40, // Non-active items pushed slightly right
                                             width: isSelected && mode.id === 'tool' ? expandedWidth : (isActive ? activeWidth : baseWidth),
@@ -206,7 +209,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                     >
                                         {/* Content */}
                                         {isSelected && mode.id === 'tool' ? (
-                                             <div className="h-full p-8 flex flex-col cursor-default" onClick={e => e.stopPropagation()}>
+                                            <div className="h-full p-8 flex flex-col cursor-default" onClick={e => e.stopPropagation()}>
                                                 {/* Header */}
                                                 <div className="flex items-center justify-between mb-8">
                                                     <h2 className="text-3xl font-bold text-slate-900">Configuration</h2>
@@ -247,7 +250,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                                 placeholder={locale === 'zh' ? "输入您的请求..." : "Enter your query..."}
                                                                 className="w-full pl-12 pr-5 py-4 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-base bg-slate-50/50"
                                                             />
-                                                            
+
                                                             {/* Dropdown */}
                                                             <AnimatePresence>
                                                                 {showScenarioList && (

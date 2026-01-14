@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Zap } from 'lucide-react';
+import { X, Zap, Settings } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
 
 interface SettingsModalProps {
@@ -39,14 +39,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const handlePayloadChange = (newPayload: string) => {
         // 验证载荷内容只包含0和1
         const isValidPayload = /^[01]*$/.test(newPayload);
-        
+
         if (!isValidPayload && newPayload !== '') {
             setShowPayloadFormatError(true);
             return; // 不更新payload
         } else {
             setShowPayloadFormatError(false);
         }
-        
+
         if (hasActiveConversation && !showPayloadWarning) {
             setShowPayloadWarning(true);
         }
@@ -75,12 +75,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
 
                     {/* Modal Container */}
-                    <div 
+                    <div
                         className="fixed z-[101]"
-                        style={{ 
-                            top: '50%', 
-                            left: '50%', 
-                            transform: 'translate(-50%, -50%)' 
+                        style={{
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)'
                         }}
                     >
                         <motion.div
@@ -91,110 +91,115 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             className="w-[45vw] min-w-[600px] max-w-[900px] bg-white rounded-2xl shadow-2xl overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-indigo-600 to-violet-600">
-                            <h2 className="text-xl font-bold text-white">Settings</h2>
-                            <button
-                                onClick={onClose}
-                                className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
-                            >
-                                <X size={20} className="text-white" />
-                            </button>
-                        </div>
+                            {/* Header */}
+                            <div className="bg-slate-50 p-6 flex justify-between items-center border-b border-slate-200">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-indigo-100 rounded-lg">
+                                        <Settings size={24} className="text-indigo-500" />
+                                    </div>
+                                    <h2 className="text-xl font-bold tracking-tight text-slate-800">Settings</h2>
+                                </div>
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
 
-                        {/* Content */}
-                        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-                            {/* Mode Switcher */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-3">Mode</label>
-                                <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200 w-full">
-                                    <button
-                                        onClick={() => isLiveMode && onToggleLiveMode()}
-                                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${!isLiveMode ? 'bg-white text-slate-700 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'
-                                            }`}
-                                    >
-                                        Simulation
-                                    </button>
-                                    <button
-                                        onClick={() => !isLiveMode && onToggleLiveMode()}
-                                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${isLiveMode ? 'bg-rose-500 text-white shadow-md shadow-rose-200' : 'text-slate-400 hover:text-slate-600'
-                                            }`}
-                                    >
-                                        <Zap size={16} fill="currentColor" /> Live Mode
-                                    </button>
+                            {/* Content */}
+                            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                                {/* Mode Switcher */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-3">Mode</label>
+                                    <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200 w-full">
+                                        <button
+                                            onClick={() => isLiveMode && onToggleLiveMode()}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${!isLiveMode ? 'bg-white text-slate-700 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'
+                                                }`}
+                                        >
+                                            Simulation
+                                        </button>
+                                        <button
+                                            onClick={() => !isLiveMode && onToggleLiveMode()}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all ${isLiveMode ? 'bg-rose-500 text-white shadow-md shadow-rose-200' : 'text-slate-400 hover:text-slate-600'
+                                                }`}
+                                        >
+                                            <Zap size={16} fill="currentColor" /> Live Mode
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* API Key */}
+                                {isLiveMode && (
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">DeepSeek API Key</label>
+                                        <input
+                                            type="password"
+                                            value={apiKey}
+                                            onChange={(e) => setApiKey(e.target.value)}
+                                            placeholder="sk-..."
+                                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm font-mono"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Payload */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        {locale === 'zh' ? '载荷内容' : 'Payload Content'}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={payload}
+                                        onChange={(e) => handlePayloadChange(e.target.value)}
+                                        placeholder="1101"
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm"
+                                    />
+                                    {showPayloadFormatError && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="mt-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3"
+                                        >
+                                            <span className="text-red-600 text-2xl flex items-center justify-center leading-none">⛔</span>
+                                            <p className="text-base text-red-800 font-semibold leading-relaxed">
+                                                {locale === 'zh' ? '载荷内容只能包含0和1！' : 'Payload can only contain 0 and 1!'}
+                                            </p>
+                                        </motion.div>
+                                    )}
+                                    {showPayloadWarning && hasActiveConversation && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="mt-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3"
+                                        >
+                                            <span className="text-amber-600 text-2xl flex items-center justify-center leading-none">⚠️</span>
+                                            <p className="text-base text-amber-800 font-semibold leading-relaxed">
+                                                {locale === 'zh' ? '修改后的载荷内容不会对当前对话生效！' : 'Modified payload will not affect the current conversation!'}
+                                            </p>
+                                        </motion.div>
+                                    )}
                                 </div>
                             </div>
 
-                              {/* API Key */}
-                              {isLiveMode && (
-                                  <div>
-                                      <label className="block text-sm font-bold text-slate-700 mb-2">DeepSeek API Key</label>
-                                      <input
-                                          type="password"
-                                          value={apiKey}
-                                          onChange={(e) => setApiKey(e.target.value)}
-                                          placeholder="sk-..."
-                                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm font-mono"
-                                      />
-                                  </div>
-                              )}
-
-                            {/* Payload */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    {locale === 'zh' ? '载荷内容' : 'Payload Content'}
-                                </label>
-                                <input
-                                    type="text"
-                                    value={payload}
-                                    onChange={(e) => handlePayloadChange(e.target.value)}
-                                    placeholder="1101"
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-sm"
-                                />
-                                {showPayloadFormatError && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="mt-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3"
-                                    >
-                                        <span className="text-red-600 text-2xl flex items-center justify-center leading-none">⛔</span>
-                                        <p className="text-base text-red-800 font-semibold leading-relaxed">
-                                            {locale === 'zh' ? '载荷内容只能包含0和1！' : 'Payload can only contain 0 and 1!'}
-                                        </p>
-                                    </motion.div>
-                                )}
-                                {showPayloadWarning && hasActiveConversation && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="mt-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3"
-                                    >
-                                        <span className="text-amber-600 text-2xl flex items-center justify-center leading-none">⚠️</span>
-                                        <p className="text-base text-amber-800 font-semibold leading-relaxed">
-                                            {locale === 'zh' ? '修改后的载荷内容不会对当前对话生效！' : 'Modified payload will not affect the current conversation!'}
-                                        </p>
-                                    </motion.div>
-                                )}
+                            {/* Footer */}
+                            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
+                                <button
+                                    onClick={onClose}
+                                    className="px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors font-medium"
+                                >
+                                    {locale === 'zh' ? '取消' : 'Cancel'}
+                                </button>
+                                <button
+                                    onClick={handleApply}
+                                    className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm transition-all hover:shadow-md active:scale-95"
+                                >
+                                    {locale === 'zh' ? '应用' : 'Apply'}
+                                </button>
                             </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
-                            <button
-                                onClick={onClose}
-                                className="px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors font-medium"
-                            >
-                                {locale === 'zh' ? '取消' : 'Cancel'}
-                            </button>
-                            <button
-                                onClick={handleApply}
-                                className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-medium hover:shadow-lg transition-all"
-                            >
-                                {locale === 'zh' ? '应用' : 'Apply'}
-                            </button>
-                        </div>
-                    </motion.div>
-                </div>
+                        </motion.div>
+                    </div>
                 </>
             )}
         </AnimatePresence>
