@@ -136,10 +136,14 @@ def get_weather(location: str, time: str = "now") -> str:
     return json.dumps({"location": location, "temperature": "65", "time": time})
 
 
-def get_weather_forecast(location: str, days: int = 3) -> str:
+def get_weather_forecast(location: str, days: str = "3") -> str:
     """Get a short weather forecast for a given location and number of days."""
+    try:
+        days_val = int(days)
+    except Exception:
+        days_val = 3
     return json.dumps(
-        {"location": location, "days": days, "forecast": ["sunny", "cloudy", "rain"]}
+        {"location": location, "days": days_val, "forecast": ["sunny", "cloudy", "rain"]}
     )
 
 
@@ -163,6 +167,46 @@ def send_sms(phone_number: str, message: str) -> str:
     print(f"To: {phone_number}")
     print(f"Message: {message}")
     return "Sent!"
+
+def get_top_rated_movies(limit: int = 10, min_imdb: float = 8.0) -> str:
+    """Return a list of top-rated movies with IMDb scores."""
+    return json.dumps(
+        {
+            "limit": limit,
+            "min_imdb": min_imdb,
+            "results": [
+                {"title": "The Shawshank Redemption", "imdb": 9.3},
+                {"title": "The Godfather", "imdb": 9.2},
+                {"title": "The Dark Knight", "imdb": 9.0},
+            ],
+        }
+    )
+
+
+def search_movies_by_genre(genre: str, limit: int = 10) -> str:
+    """Search movies by genre."""
+    return json.dumps(
+        {
+            "genre": genre,
+            "limit": limit,
+            "results": ["Inception", "Interstellar", "The Matrix"],
+        }
+    )
+
+
+def get_movie_summary(title: str) -> str:
+    """Fetch a short summary for a movie title."""
+    return json.dumps(
+        {
+            "title": title,
+            "summary": "A brief synopsis for the requested movie.",
+        }
+    )
+
+
+def search_web(query: str) -> str:
+    """Search the web for general queries."""
+    return json.dumps({"query": query, "results": []})
 
 
 ADD_AGENT_SYSTEM_PROMPT = "You are a helpful agent."
@@ -232,7 +276,90 @@ ADD_AGENT_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_top_rated_movies",
+            "description": "Return a list of top-rated movies with IMDb scores.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer"},
+                    "min_imdb": {"type": "number"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_movies_by_genre",
+            "description": "Search movies by genre.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "genre": {"type": "string"},
+                    "limit": {"type": "integer"},
+                },
+                "required": ["genre"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_movie_summary",
+            "description": "Fetch a short summary for a movie title.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                },
+                "required": ["title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_web",
+            "description": "Search the web for general queries.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
 ]
+
+_SWARM_ADD_AGENT = None
+
+
+def _get_swarm_add_agent():
+    global _SWARM_ADD_AGENT
+    if _SWARM_ADD_AGENT is None:
+        from swarm import Agent
+
+        _SWARM_ADD_AGENT = Agent(
+            name="General Tool Agent",
+            instructions=ADD_AGENT_SYSTEM_PROMPT,
+            functions=[
+                get_weather,
+                get_weather_forecast,
+                get_air_quality,
+                get_top_rated_movies,
+                search_movies_by_genre,
+                get_movie_summary,
+                search_web,
+                send_email,
+                send_sms,
+            ],
+        )
+    return _SWARM_ADD_AGENT
 
 
 class AddAgentSession:
@@ -246,18 +373,67 @@ class AddAgentSession:
 add_agent_sessions: Dict[str, AddAgentSession] = {}
 
 
+_PROXY_BASE_CACHE: Optional[str] = None
+_BASE_LLM_BASE_CACHE: Optional[str] = None
+
+_BASE_MODEL_MAP = {
+    "gpt-4o": "deepseek-chat",
+    "gpt-4o-mini": "deepseek-chat",
+    "gpt-4-turbo": "deepseek-chat",
+    "gpt-4": "deepseek-chat",
+    "gpt-3.5-turbo": "deepseek-chat",
+}
+
+
 def _get_proxy_base() -> str:
-    return (
-        os.getenv("AGENTMARK_PROXY_BASE")
-        or os.getenv("OPENAI_BASE_URL")
-        or "http://localhost:8001/v1"
-    )
+    global _PROXY_BASE_CACHE
+    if _PROXY_BASE_CACHE is None:
+        _PROXY_BASE_CACHE = (
+            os.getenv("AGENTMARK_PROXY_BASE")
+            or os.getenv("OPENAI_BASE_URL")
+            or "http://localhost:8001/v1"
+        )
+        print(f"[INFO] AgentMark proxy base: {_PROXY_BASE_CACHE}")
+    return _PROXY_BASE_CACHE
+
+
+def _get_base_llm_base() -> str:
+    global _BASE_LLM_BASE_CACHE
+    if _BASE_LLM_BASE_CACHE is None:
+        _BASE_LLM_BASE_CACHE = (
+            os.getenv("AGENTMARK_BASE_LLM_BASE")
+            or os.getenv("TARGET_LLM_BASE")
+            or "https://api.deepseek.com"
+        )
+        print(f"[INFO] AgentMark base LLM base: {_BASE_LLM_BASE_CACHE}")
+    return _BASE_LLM_BASE_CACHE
+
+
+def _resolve_base_model(requested_model: str) -> str:
+    override = os.getenv("AGENTMARK_BASE_MODEL") or os.getenv("TARGET_LLM_MODEL")
+    if override:
+        return override
+    model_map_env = os.getenv("TARGET_LLM_MODEL_MAP")
+    if model_map_env:
+        try:
+            model_map = json.loads(model_map_env)
+            return model_map.get(requested_model, requested_model)
+        except json.JSONDecodeError:
+            pass
+    return _BASE_MODEL_MAP.get(requested_model, requested_model)
 
 
 def _build_proxy_client(api_key: Optional[str]) -> OpenAI:
     return OpenAI(
         api_key=api_key or os.getenv("OPENAI_API_KEY") or "anything",
         base_url=_get_proxy_base(),
+    )
+
+
+def _build_base_llm_client(api_key: Optional[str]) -> OpenAI:
+    return OpenAI(
+        api_key=api_key or os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY") or "anything",
+        base_url=_get_base_llm_base(),
     )
 
 
@@ -275,19 +451,102 @@ def _extract_watermark(completion: Any) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _extract_tool_calls(message: Any) -> List[Dict[str, Any]]:
+    raw_tool_calls = getattr(message, "tool_calls", None)
+    if not raw_tool_calls:
+        return []
+    tool_calls: List[Dict[str, Any]] = []
+    for call in raw_tool_calls:
+        if hasattr(call, "model_dump"):
+            tool_calls.append(call.model_dump())
+        elif isinstance(call, dict):
+            tool_calls.append(call)
+        else:
+            tool_calls.append(getattr(call, "__dict__", {}))
+    return tool_calls
+
+
+def _extract_tokens_used(completion: Any) -> float:
+    tokens_used = 0.0
+    try:
+        usage = getattr(completion, "usage", None)
+        if usage is not None:
+            if hasattr(usage, "total_tokens"):
+                tokens_used = float(getattr(usage, "total_tokens", 0) or 0)
+            elif isinstance(usage, dict):
+                tokens_used = float(usage.get("total_tokens", 0) or 0)
+    except Exception:
+        tokens_used = 0.0
+    return tokens_used
+
+
+def _build_baseline_step(
+    completion: Any,
+    latency: float,
+    *,
+    fallback_content: str = "",
+) -> Optional[Dict[str, Any]]:
+    try:
+        message = completion.choices[0].message if completion and completion.choices else None
+    except Exception:
+        message = None
+    if message is None:
+        return None
+    content = (getattr(message, "content", None) or fallback_content or "").strip()
+    tool_calls = _extract_tool_calls(message)
+    action = ""
+    tool_details = ""
+    step_type = "other"
+    final_answer = content or None
+    if tool_calls:
+        first = tool_calls[0]
+        fn = first.get("function", {}) if isinstance(first.get("function"), dict) else {}
+        name = fn.get("name") or first.get("name") or ""
+        action = f"Call: {name}" if name else ""
+        args = fn.get("arguments")
+        if args is None:
+            args = first.get("arguments")
+        if isinstance(args, dict):
+            tool_details = json.dumps(args, ensure_ascii=False)
+        elif args is not None:
+            tool_details = str(args)
+        step_type = "tool"
+        final_answer = None
+    elif final_answer:
+        step_type = "finish"
+        action = "Finish"
+
+    tokens_used = _extract_tokens_used(completion)
+    if latency <= 0:
+        latency = 0.001
+
+    return {
+        "thought": "",
+        "action": action,
+        "toolDetails": tool_details,
+        "distribution": [],
+        "stepType": step_type,
+        "finalAnswer": final_answer,
+        "metrics": {"latency": float(latency), "tokens": float(tokens_used)},
+    }
+
+
 def _build_add_agent_step(
     watermark: Dict[str, Any],
     step_index: int,
     completion_content: Optional[str],
     completion_tool_calls: Optional[List[Dict[str, Any]]],
+    *,
+    latency: float,
+    tokens: float,
 ) -> Dict[str, Any]:
     frontend = watermark.get("frontend_data") or {}
     diff = frontend.get("distribution_diff") or []
     distribution = []
     for item in diff:
-        prob = item.get("watermarked_prob")
+        prob = item.get("original_prob")
         if prob is None:
-            prob = item.get("original_prob", 0)
+            prob = item.get("watermarked_prob", 0)
         distribution.append(
             {
                 "name": item.get("action") or "",
@@ -324,7 +583,7 @@ def _build_add_agent_step(
             "rankContribution": len(matrix_rows),
         },
         "stepType": step_type,
-        "metrics": {"latency": 0.0, "tokens": 0.0},
+        "metrics": {"latency": float(latency), "tokens": float(tokens)},
         "finalAnswer": final_answer or None,
     }
 
@@ -570,36 +829,65 @@ async def add_agent_turn(req: AddAgentTurnRequest):
     session = add_agent_sessions[req.sessionId]
     model_name = os.getenv("AGENTMARK_TARGET_MODEL", "gpt-4o")
     completion = None
+    started_at = time.time()
     use_swarm = (os.getenv("AGENTMARK_USE_SWARM") or "1").strip().lower() not in {"0", "false", "no"}
+    use_baseline = (os.getenv("AGENTMARK_ADD_AGENT_BASELINE") or "1").strip().lower() not in {"0", "false", "no"}
+    proxy_base = _get_proxy_base()
+    agentmark_body = {
+        "session_id": session.session_id,
+        "context": f"{session.session_id}||step{session.step_count}",
+        "use_scoring_tool": True,
+    }
+    messages = [
+        {"role": "system", "content": ADD_AGENT_SYSTEM_PROMPT},
+        {"role": "user", "content": req.message.strip()},
+    ]
 
     if use_swarm:
         try:
             from swarm import Swarm
-            from examples.weather_agent.agents import weather_agent
 
             swarm_client = Swarm(client=_build_proxy_client(req.apiKey or session.api_key))
             completion = swarm_client.get_chat_completion(
-                agent=weather_agent,
+                agent=_get_swarm_add_agent(),
                 history=[{"role": "user", "content": req.message.strip()}],
                 context_variables={},
                 model_override=model_name,
                 stream=False,
                 debug=False,
+                extra_body={"agentmark": agentmark_body},
+                tools_override=ADD_AGENT_TOOLS,
             )
         except Exception as exc:
             print(f"[WARN] Swarm bridge failed, falling back to direct call: {exc}")
 
     if completion is None:
         client = _build_proxy_client(req.apiKey or session.api_key)
-        messages = [
-            {"role": "system", "content": ADD_AGENT_SYSTEM_PROMPT},
-            {"role": "user", "content": req.message.strip()},
-        ]
-        completion = client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            tools=ADD_AGENT_TOOLS,
-        )
+        try:
+            completion = client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                tools=ADD_AGENT_TOOLS,
+                extra_body={"agentmark": agentmark_body},
+            )
+        except Exception as exc:
+            detail = f"Proxy call failed ({proxy_base}): {exc}"
+            raise HTTPException(status_code=502, detail=detail)
+    latency = time.time() - started_at
+    baseline_step = None
+    if use_baseline:
+        base_started = time.time()
+        try:
+            base_client = _build_base_llm_client(req.apiKey or session.api_key)
+            base_completion = base_client.chat.completions.create(
+                model=_resolve_base_model(model_name),
+                messages=messages,
+                tools=ADD_AGENT_TOOLS,
+            )
+            base_latency = time.time() - base_started
+            baseline_step = _build_baseline_step(base_completion, base_latency)
+        except Exception as exc:
+            print(f"[WARN] Baseline call failed: {exc}")
     watermark = _extract_watermark(completion)
     if not watermark:
         raise HTTPException(status_code=500, detail="Missing watermark in response")
@@ -613,27 +901,37 @@ async def add_agent_turn(req: AddAgentTurnRequest):
     completion_tool_calls: Optional[List[Dict[str, Any]]] = None
     if completion_message is not None:
         completion_content = completion_message.content or ""
-        raw_tool_calls = getattr(completion_message, "tool_calls", None)
-        if raw_tool_calls:
-            completion_tool_calls = []
-            for call in raw_tool_calls:
-                if hasattr(call, "model_dump"):
-                    completion_tool_calls.append(call.model_dump())
-                elif isinstance(call, dict):
-                    completion_tool_calls.append(call)
-                else:
-                    completion_tool_calls.append(getattr(call, "__dict__", {}))
+        tool_calls = _extract_tool_calls(completion_message)
+        if tool_calls:
+            completion_tool_calls = tool_calls
+    tokens_used = _extract_tokens_used(completion)
+
+    prompt_trace = watermark.get("prompt_trace") or {}
+    if tokens_used <= 0:
+        scoring_text = prompt_trace.get("scoring_prompt_text") or ""
+        exec_text = prompt_trace.get("execution_prompt_text") or ""
+        approx = (len(scoring_text) + len(exec_text)) / 4.0
+        if approx > 0:
+            tokens_used = max(1.0, approx)
+
+    if latency <= 0:
+        latency = 0.001
+
     step = _build_add_agent_step(
         watermark,
         session.step_count,
         completion_content,
         completion_tool_calls,
+        latency=latency,
+        tokens=tokens_used,
     )
+    if baseline_step:
+        step["baseline"] = baseline_step
     session.step_count += 1
     return {
         "sessionId": req.sessionId,
         "step": step,
-        "promptTrace": watermark.get("prompt_trace"),
+        "promptTrace": prompt_trace,
         "watermark": watermark,
     }
 

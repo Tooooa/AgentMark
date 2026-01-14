@@ -274,11 +274,11 @@ class AgentWatermarker:
         selected_bin_start_index = bins[bin_indice_idx]
         bin_content_indices = indices_nonzero[selected_bin_start_index:]
 
-        # Approximate per-action watermarked mass: bin mass spread uniformly over bin members.
+        # Watermarked per-action mass for the selected bin only.
+        # This reflects the conditional distribution after bin selection.
+        watermarked = {b: 0.0 for b in behaviors}
         bin_mass = float(prob_new[bin_indice_idx].item())
         share = bin_mass / len(bin_content_indices) if len(bin_content_indices) > 0 else 0.0
-
-        watermarked = {b: 0.0 for b in behaviors}
         for idx in bin_content_indices:
             watermarked[behaviors[int(idx)]] = share
 
