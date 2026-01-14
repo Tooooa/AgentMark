@@ -514,16 +514,10 @@ def proxy_completion(req: CompletionRequest, request: Request):
         )
 
         final_resp = scoring_resp
-<<<<<<< Updated upstream
-        two_pass = _should_two_pass(req)
-        execution_messages: Optional[List[Dict[str, Any]]] = None
-        if two_pass:
-            base_messages = _sanitize_messages([_message_to_dict(m) for m in req.messages])
-=======
         tool_mode = _tool_mode(req)
+        execution_messages: Optional[List[Dict[str, Any]]] = None
         if tool_mode == "two_pass":
-            base_messages = [m.dict() for m in req.messages]
->>>>>>> Stashed changes
+            base_messages = _sanitize_messages([_message_to_dict(m) for m in req.messages])
             tool_choice = None
             if req.tools and result["action"] in candidates:
                 tool_choice = {"type": "function", "function": {"name": result["action"]}}
@@ -550,11 +544,7 @@ def proxy_completion(req: CompletionRequest, request: Request):
 
         # Build response: keep original structure, append watermark info
         resp_dict = final_resp.model_dump()
-<<<<<<< Updated upstream
-        if not two_pass and req.tools:
-=======
         if tool_mode == "proxy" and req.tools:
->>>>>>> Stashed changes
             tool_calls = _build_tool_calls(result["action"], result["action_args"])
             if resp_dict.get("choices"):
                 resp_dict["choices"][0]["message"]["tool_calls"] = tool_calls
@@ -562,15 +552,11 @@ def proxy_completion(req: CompletionRequest, request: Request):
                 resp_dict["choices"][0]["message"]["content"] = None
             _debug_print(
                 "tool_calls_proxy",
-<<<<<<< Updated upstream
-                {"tool_calls": tool_calls, "arguments_obj": result["action_args"]},
-=======
                 {
                     "tool_calls": tool_calls,
                     "arguments_obj": result["action_args"],
                     "selected_probability": result["probabilities_used"].get(result["action"]),
                 },
->>>>>>> Stashed changes
             )
         resp_dict["watermark"] = {
             "action": result["action"],

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, PlusCircle } from 'lucide-react';
 import {
     CartesianGrid,
     Line,
@@ -12,8 +12,9 @@ import {
 import MainLayout from '../layout/MainLayout';
 import FlowFeed from '../execution/FlowFeed';
 import DecoderPanel from '../decoder/DecoderPanel';
-import type { Step } from '../../data/mockData';
+import type { Step, Trajectory } from '../../data/mockData';
 import { api } from '../../services/api';
+import { useI18n } from '../../i18n/I18nContext';
 
 type AddAgentDashboardProps = {
     onHome: () => void;
@@ -34,10 +35,12 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
     setErasureRate,
     initialInput
 }) => {
+    const { locale } = useI18n();
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [steps, setSteps] = useState<Step[]>([]);
     const [promptTraceText, setPromptTraceText] = useState('');
-    const [lastWatermark, setLastWatermark] = useState<any | null>(null);
+    const [historyScenarios, setHistoryScenarios] = useState<Trajectory[]>([]);
+    const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
     const [isSending, setIsSending] = useState(false);
     const erasedIndices = useMemo(() => new Set<number>(), []);
     const promptInputRef = useRef<HTMLInputElement>(null);
@@ -78,9 +81,6 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
             if (res.step) {
                 setSteps((prev) => [...prev, res.step as Step]);
             }
-            if (res.watermark) {
-                setLastWatermark(res.watermark);
-            }
             const promptTrace = res.promptTrace;
             if (promptTrace) {
                 const promptText =
@@ -102,41 +102,120 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
         }
     }, [initialInput, handleContinue]);
 
-    const candidateList = lastWatermark?.candidates_used || [];
-    const candidateMode = lastWatermark?.mode || '-';
+    useEffect(() => {
+        const loadScenarios = async () => {
+            try {
+                const saved = await api.listScenarios();
+                setHistoryScenarios(saved);
+            } catch (e) {
+                console.error('Failed to load scenarios', e);
+            }
+        };
+        loadScenarios();
+    }, []);
+
+    const handleNewChat = () => {
+        setSessionId(null);
+        setSteps([]);
+        setPromptTraceText('');
+        setSelectedHistoryId(null);
+    };
 
     const leftPanel = (
         <div className="flex flex-col gap-6 h-full text-slate-800">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-                <div className="text-sm font-semibold text-slate-500 uppercase tracking-widest">Add Agent</div>
-                <div className="text-sm text-slate-700">
-                    <div className="font-semibold">Repository</div>
-                    <div className="text-xs text-slate-500 break-all mt-1">{repoUrl || '-'}</div>
+            <button
+                onClick={handleNewChat}
+                className="w-full py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 hover:border-indigo-300 text-slate-700 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 font-medium tracking-wide group"
+            >
+                <PlusCircle size={18} className="text-indigo-500 group-hover:text-indigo-600" />
+                {locale === 'zh' ? '新对话' : 'New Chat'}
+            </button>
+
+            <div className="h-60 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col shrink-0">
+                <div className="p-3 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        {locale === 'zh' ? '历史记录' : 'History'}
+                    </h3>
                 </div>
-                <div className="text-sm text-slate-700">
-                    <div className="font-semibold">API Key</div>
-                    <div className="text-xs text-slate-500 mt-1">{apiKey ? '••••••••' : '-'}</div>
-                </div>
-                <div className="text-sm text-slate-700">
-                    <div className="font-semibold">Candidate Source</div>
-                    <div className="text-xs text-slate-500 mt-1">{candidateMode}</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                        {candidateList.length > 0 ? (
-                            candidateList.map((name: string) => (
-                                <span
-                                    key={name}
-                                    className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600"
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-slate-200">
+                    {historyScenarios.length === 0 ? (
+                        <div className="text-center text-slate-400 text-xs py-8">
+                            {locale === 'zh' ? '暂无历史记录' : 'No history yet'}
+                        </div>
+                    ) : (
+                        historyScenarios.map((s) => {
+                            const timestampMatch = s.id.match(/sess_(\d+)_/);
+                            let timeStr = '';
+                            if (timestampMatch) {
+                                const timestamp = parseInt(timestampMatch[1]) * 1000;
+                                const date = new Date(timestamp);
+                                const now = new Date();
+                                const diffMs = now.getTime() - date.getTime();
+                                const diffMins = Math.floor(diffMs / 60000);
+                                const diffHours = Math.floor(diffMs / 3600000);
+                                const diffDays = Math.floor(diffMs / 86400000);
+
+                                if (diffMins < 1) {
+                                    timeStr = locale === 'zh' ? '刚刚' : 'Just now';
+                                } else if (diffMins < 60) {
+                                    timeStr = locale === 'zh' ? `${diffMins}分钟前` : `${diffMins}m ago`;
+                                } else if (diffHours < 24) {
+                                    timeStr = locale === 'zh' ? `${diffHours}小时前` : `${diffHours}h ago`;
+                                } else if (diffDays < 7) {
+                                    timeStr = locale === 'zh' ? `${diffDays}天前` : `${diffDays}d ago`;
+                                } else {
+                                    timeStr = date.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {
+                                        month: 'short',
+                                        day: 'numeric'
+                                    });
+                                }
+                            }
+
+                            const isActive = selectedHistoryId === s.id;
+
+                            return (
+                                <div
+                                    key={s.id}
+                                    onClick={() => setSelectedHistoryId(s.id)}
+                                    className={`w-full text-left p-3 rounded-lg text-sm transition-all group relative cursor-pointer ${
+                                        isActive
+                                            ? 'bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 font-medium border-l-3 border-indigo-500 shadow-sm'
+                                            : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                                    }`}
                                 >
-                                    {name}
-                                </span>
-                            ))
-                        ) : (
-                            <span className="text-xs text-slate-400">-</span>
-                        )}
-                    </div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="line-clamp-1 leading-relaxed flex-1">
+                                            {locale === 'zh' ? (s.title.zh || s.title.en) : s.title.en}
+                                        </div>
+                                        {isActive && (
+                                            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-lg shadow-indigo-500/50"></div>
+                                        )}
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-2 text-[10px]">
+                                        <span className={isActive ? 'text-indigo-600' : 'text-slate-400'}>
+                                            {s.steps.length} turns
+                                        </span>
+                                        {timeStr && (
+                                            <>
+                                                <span className={isActive ? 'text-indigo-400' : 'text-slate-400'}>•</span>
+                                                <span className={isActive ? 'text-indigo-600' : 'text-slate-400'}>
+                                                    {timeStr}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
-                <div className="text-xs text-slate-500">
-                    建议输入：例如“北京的天气怎么样？”
+                <div className="p-2 border-t border-slate-50">
+                    <button
+                        className="w-full text-[10px] text-slate-500 hover:text-indigo-600 font-medium flex items-center justify-center gap-1 transition-colors"
+                        onClick={() => undefined}
+                    >
+                        {locale === 'zh' ? '查看全部历史' : 'View all history'} <span>→</span>
+                    </button>
                 </div>
             </div>
 
