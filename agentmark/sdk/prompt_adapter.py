@@ -12,7 +12,8 @@ from typing import Dict, List, Optional, Tuple, Any
 
 from agentmark.sdk import AgentWatermarker
 
-DEFAULT_PROB_TEMPERATURE = 1.5
+DEFAULT_PROB_TEMPERATURE = 1.0
+DEFAULT_MIN_WEIGHT = 1e-4
 
 
 PROMPT_INSTRUCTION = """You are an action-selection assistant.
@@ -25,14 +26,14 @@ Example:
 }
 Requirements:
 - action_weights MUST include every candidate (or top-K if instructed).
-<<<<<<< Updated upstream
+- All action_weights MUST be > 0. Use small values like 1e-3 for unlikely actions.
 - action_args MUST include every candidate. For each candidate, provide a JSON object of arguments.
   Fill any arguments you can infer from the user request and tool schema. If unsure, still include
   keys with placeholder values (empty string, 0, or null) instead of omitting the candidate.
-=======
-- action_args MUST include every candidate; use {} if arguments are unknown.
->>>>>>> Stashed changes
 - Sum does not need to be exact; we will normalize.
+- All action_weights must be > 0; do NOT return all zeros.
+- Avoid uniform weights; if uncertain, break ties with slight preferences by candidate order.
+- If a tool named "agentmark_score_actions" is available, call it with the JSON instead of writing text.
 - Do NOT output any extra text or code fences."""
 
 
@@ -119,6 +120,10 @@ def normalize_probabilities(probs: Dict[str, float]) -> Dict[str, float]:
     total = float(sum(probs.values()))
     if total <= 0:
         return {}
+    min_val = float(_getenv("AGENTMARK_MIN_WEIGHT") or 0.0)
+    if min_val > 0:
+        probs = {k: max(float(v), min_val) for k, v in probs.items()}
+        total = float(sum(probs.values()))
     return {k: float(v) / total for k, v in probs.items()}
 
 
@@ -143,6 +148,31 @@ def _force_uniform(probs: Dict[str, float], fallback_actions: Optional[List[str]
         return probs
     uniform = 1.0 / len(keys)
     return {k: uniform for k in keys}
+
+
+def _maybe_bias_uniform(
+    probs: Dict[str, float],
+    fallback_actions: Optional[List[str]],
+    *,
+    tol: float = 1e-6,
+) -> Dict[str, float]:
+    if not probs:
+        return probs
+    values = list(probs.values())
+    if max(values) - min(values) > tol:
+        return probs
+    keys = list(fallback_actions or probs.keys())
+    if not keys:
+        return probs
+    try:
+        decay = float(_getenv("AGENTMARK_UNIFORM_BIAS_DECAY") or 0.3)
+    except ValueError:
+        decay = 0.3
+    decay = min(max(decay, 0.0), 1.0)
+    if decay <= 0.0:
+        return probs
+    weights = {k: decay ** i for i, k in enumerate(keys)}
+    return normalize_probabilities(weights)
 
 
 def _getenv(name: str) -> Optional[str]:
@@ -202,6 +232,7 @@ def choose_action_from_prompt_output(
             probs = apply_temperature(probs, float(temp_env))
         except ValueError:
             pass
+    probs = _maybe_bias_uniform(probs, fallback_actions)
 
     res = wm.sample(probabilities=probs, context=context, history=history, round_num=round_num)
     return res.action, probs
@@ -237,7 +268,34 @@ class PromptWatermarkWrapper:
         weights = {}
         if isinstance(payload, dict):
             weights = payload.get("action_weights") or payload.get("action_probs") or payload.get("scores") or {}
-        probs = normalize_probabilities(weights) if weights else {}
+
+        probs: Dict[str, float] = {}
+        if fallback_actions:
+            try:
+                min_weight = float(_getenv("AGENTMARK_MIN_WEIGHT") or DEFAULT_MIN_WEIGHT)
+            except ValueError:
+                min_weight = DEFAULT_MIN_WEIGHT
+            min_weight = max(min_weight, 0.0)
+            filled: Dict[str, float] = {}
+            if isinstance(weights, dict):
+                for action in fallback_actions:
+                    if action in weights:
+                        raw_val = weights.get(action, 0.0)
+                        try:
+                            raw_val = float(raw_val)
+                        except Exception:
+                            raw_val = 0.0
+                        if raw_val <= 0.0:
+                            raw_val = min_weight
+                        filled[action] = raw_val
+                    else:
+                        filled[action] = min_weight
+            else:
+                for action in fallback_actions:
+                    filled[action] = min_weight
+            probs = normalize_probabilities(filled)
+        elif weights:
+            probs = normalize_probabilities(weights)
 
         if not probs:
             if fallback_actions:
@@ -257,6 +315,7 @@ class PromptWatermarkWrapper:
                 probs = apply_temperature(probs, float(temp_env))
             except ValueError:
                 pass
+        probs = _maybe_bias_uniform(probs, fallback_actions)
 
         res = self.wm.sample(probabilities=probs, context=context, history=history, round_num=round_num)
 

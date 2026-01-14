@@ -94,6 +94,88 @@ def _debug_print(label: str, payload: Any) -> None:
         print(f"[agentmark:{label}] {json.dumps(payload, ensure_ascii=False, default=str)}")
 
 
+def _env_flag(name: str) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _coerce_bool(value: Any) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+    return None
+
+
+def _score_tool_enabled(req: CompletionRequest, system_agentmark: Dict[str, Any]) -> bool:
+    if _env_flag("AGENTMARK_SCORE_TOOL"):
+        return True
+    eb = req.extra_body or {}
+    agentmark_cfg = eb.get("agentmark") or {}
+    for candidate in (
+        agentmark_cfg.get("use_scoring_tool"),
+        eb.get("use_scoring_tool"),
+        system_agentmark.get("use_scoring_tool"),
+    ):
+        coerced = _coerce_bool(candidate)
+        if coerced is not None:
+            return coerced
+    return False
+
+
+def _score_tool_schema() -> Dict[str, Any]:
+    return {
+        "type": "function",
+        "function": {
+            "name": "agentmark_score_actions",
+            "description": "Return action weights and optional arguments for the candidates.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action_weights": {
+                        "type": "object",
+                        "description": "Mapping from action name to weight.",
+                        "additionalProperties": {"type": "number"},
+                    },
+                    "action_args": {
+                        "type": "object",
+                        "description": "Mapping from action name to argument object.",
+                        "additionalProperties": {"type": "object"},
+                    },
+                    "thought": {"type": "string"},
+                },
+                "required": ["action_weights", "action_args"],
+            },
+        },
+    }
+
+
+def _extract_tool_call_arguments(message: Any) -> Optional[Dict[str, Any]]:
+    if message is None:
+        return None
+    tool_calls = getattr(message, "tool_calls", None)
+    if tool_calls is None and isinstance(message, dict):
+        tool_calls = message.get("tool_calls")
+    if not tool_calls:
+        return None
+    call = tool_calls[0]
+    if not isinstance(call, dict):
+        try:
+            call = call.model_dump()
+        except Exception:
+            return None
+    fn = call.get("function")
+    if isinstance(fn, dict):
+        return fn
+    return None
+
+
 def _extract_system_prompt_text(messages: List[Message]) -> str:
     for msg in messages:
         if msg.role == "system":
@@ -439,6 +521,7 @@ def proxy_completion(req: CompletionRequest, request: Request):
         wm = _get_watermarker(session_key)
         round_used = wm.current_round
         context_used = _extract_context(req, system_agentmark, session_key, round_used)
+        use_scoring_tool = _score_tool_enabled(req, system_agentmark)
         rewritten = _inject_prompt(
             req.messages,
             instr,
@@ -456,6 +539,7 @@ def proxy_completion(req: CompletionRequest, request: Request):
                 "extra_body": req.extra_body,
                 "context": req.context,
                 "candidates": req.candidates,
+                "use_scoring_tool": use_scoring_tool,
             },
         )
         _debug_print("system_prompt", {"content": _extract_system_prompt_text(req.messages)})
@@ -473,13 +557,40 @@ def proxy_completion(req: CompletionRequest, request: Request):
 
         client = _llm_client()
         target_model = _resolve_model(req.model)
-        scoring_resp = client.chat.completions.create(
-            model=target_model,
-            messages=rewritten,
-            temperature=req.temperature,
-            max_tokens=req.max_tokens,
-        )
-        raw_text = scoring_resp.choices[0].message.content
+        score_tools = None
+        score_tool_choice = None
+        if use_scoring_tool:
+            score_tool = _score_tool_schema()
+            score_tools = [score_tool]
+            score_tool_choice = {"type": "function", "function": {"name": score_tool["function"]["name"]}}
+
+        scoring_kwargs: Dict[str, Any] = {
+            "model": target_model,
+            "messages": rewritten,
+            "temperature": req.temperature,
+            "max_tokens": req.max_tokens,
+        }
+        if use_scoring_tool:
+            scoring_kwargs["tools"] = score_tools
+            scoring_kwargs["tool_choice"] = score_tool_choice
+
+        scoring_resp = client.chat.completions.create(**scoring_kwargs)
+        message = scoring_resp.choices[0].message
+        raw_text = message.content or ""
+        score_call = _extract_tool_call_arguments(message)
+        if score_call:
+            arguments = score_call.get("arguments")
+            if isinstance(arguments, str):
+                raw_text = arguments
+            elif arguments is not None:
+                raw_text = json.dumps(arguments, ensure_ascii=False)
+            _debug_print(
+                "score_tool_call",
+                {
+                    "name": score_call.get("name"),
+                    "arguments": raw_text,
+                },
+            )
         _debug_print("llm_raw_output", {"raw_text": raw_text})
 
         wrapper = PromptWatermarkWrapper(wm)

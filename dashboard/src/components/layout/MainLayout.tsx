@@ -10,17 +10,39 @@ type MainLayoutProps = {
     onHome: () => void;
     onSettings?: () => void;
     settingsButtonRef?: React.RefObject<HTMLButtonElement | null>;
+    variant?: 'default' | 'add_agent';
 };
 
-const MainLayout: React.FC<MainLayoutProps> = ({ left, middle, right, onHome, onSettings, settingsButtonRef }) => {
+const MainLayout: React.FC<MainLayoutProps> = ({
+    left,
+    middle,
+    right,
+    onHome,
+    onSettings,
+    settingsButtonRef,
+    variant = 'default'
+}) => {
     const { locale, setLocale, t } = useI18n();
+    const isAddAgent = variant === 'add_agent';
+    const rootClass = isAddAgent
+        ? 'h-screen bg-gradient-to-br from-sky-100 via-white to-indigo-100 flex flex-col font-sans overflow-hidden'
+        : 'h-screen bg-slate-50 flex flex-col font-sans overflow-hidden';
+    const headerClass = isAddAgent
+        ? 'flex-none px-6 py-4 bg-sky-50/80 backdrop-blur border-b border-sky-200 flex justify-between items-center z-10'
+        : 'flex-none px-6 py-4 bg-white/80 backdrop-blur border-b border-indigo-100 flex justify-between items-center z-10';
+    const titleClass = isAddAgent
+        ? 'text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-indigo-600'
+        : 'text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600';
+    const buttonClass = isAddAgent
+        ? 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-sky-200 shadow-sm hover:bg-sky-100 transition-colors text-sm font-medium text-slate-600'
+        : 'flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors text-sm font-medium text-slate-600';
 
     return (
-        <div className="h-screen bg-slate-50 flex flex-col font-sans overflow-hidden">
+        <div className={rootClass}>
             {/* Header - Fixed Height */}
-            <header className="flex-none px-6 py-4 bg-white/80 backdrop-blur border-b border-indigo-100 flex justify-between items-center z-10">
+            <header className={headerClass}>
                 <div>
-                    <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">
+                    <h1 className={titleClass}>
                         {t('title')}
                     </h1>
                     <p className="text-xs text-slate-500 mt-1">{t('subtitle')}</p>
@@ -31,7 +53,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ left, middle, right, onHome, on
                         <button
                             ref={settingsButtonRef}
                             onClick={onSettings}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors text-sm font-medium text-slate-600"
+                            className={buttonClass}
                             title={locale === 'en' ? 'Settings' : '设置'}
                         >
                             <Settings size={14} />
@@ -41,7 +63,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ left, middle, right, onHome, on
                     
                     <button
                         onClick={onHome}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors text-sm font-medium text-slate-600"
+                        className={buttonClass}
                         title={locale === 'en' ? 'Back to Home' : '返回首页'}
                     >
                         <Home size={14} />
@@ -50,7 +72,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ left, middle, right, onHome, on
 
                     <button
                         onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors text-sm font-medium text-slate-600"
+                        className={buttonClass}
                     >
                         <Languages size={14} />
                         {locale === 'en' ? 'English' : '中文'}

@@ -76,8 +76,23 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
         if (!content) return;
         setIsSending(true);
         try {
-            const sid = sessionId || await startSession();
-            const res = await api.addAgentTurn(sid, content, apiKey);
+            let sid = sessionId || await startSession();
+            let res;
+            try {
+                res = await api.addAgentTurn(sid, content, apiKey);
+            } catch (err: any) {
+                const status = err?.response?.status;
+                if (status === 404) {
+                    setSessionId(null);
+                    setSteps([]);
+                    setPromptTraceText('');
+                    setSelectedHistoryId(null);
+                    sid = await startSession();
+                    res = await api.addAgentTurn(sid, content, apiKey);
+                } else {
+                    throw err;
+                }
+            }
             if (res.step) {
                 setSteps((prev) => [...prev, res.step as Step]);
             }
@@ -125,19 +140,19 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
         <div className="flex flex-col gap-6 h-full text-slate-800">
             <button
                 onClick={handleNewChat}
-                className="w-full py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 hover:border-indigo-300 text-slate-700 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 font-medium tracking-wide group"
+                className="w-full py-3 px-4 bg-sky-50/80 hover:bg-sky-100 border border-sky-200 hover:border-sky-400 text-slate-700 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 font-medium tracking-wide group"
             >
-                <PlusCircle size={18} className="text-indigo-500 group-hover:text-indigo-600" />
+                <PlusCircle size={18} className="text-sky-500 group-hover:text-sky-600" />
                 {locale === 'zh' ? '新对话' : 'New Chat'}
             </button>
 
-            <div className="h-60 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col shrink-0">
-                <div className="p-3 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <div className="h-60 bg-sky-50/70 rounded-xl shadow-sm border border-sky-200 overflow-hidden flex flex-col shrink-0">
+                <div className="p-3 border-b border-sky-200 bg-sky-100/70 flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-sky-600 uppercase tracking-wider">
                         {locale === 'zh' ? '历史记录' : 'History'}
                     </h3>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-slate-200">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-sky-300">
                     {historyScenarios.length === 0 ? (
                         <div className="text-center text-slate-400 text-xs py-8">
                             {locale === 'zh' ? '暂无历史记录' : 'No history yet'}
@@ -179,8 +194,8 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                                     onClick={() => setSelectedHistoryId(s.id)}
                                     className={`w-full text-left p-3 rounded-lg text-sm transition-all group relative cursor-pointer ${
                                         isActive
-                                            ? 'bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 font-medium border-l-3 border-indigo-500 shadow-sm'
-                                            : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                                            ? 'bg-gradient-to-r from-sky-100 to-indigo-100 text-sky-800 font-medium border-l-3 border-sky-500 shadow-md'
+                                            : 'hover:bg-sky-50/70 text-slate-600 hover:text-slate-900'
                                     }`}
                                 >
                                     <div className="flex items-center justify-between gap-2">
@@ -188,17 +203,17 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                                             {locale === 'zh' ? (s.title.zh || s.title.en) : s.title.en}
                                         </div>
                                         {isActive && (
-                                            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-lg shadow-indigo-500/50"></div>
+                                            <div className="w-2 h-2 bg-sky-500 rounded-full animate-pulse shadow-lg shadow-sky-500/40"></div>
                                         )}
                                     </div>
                                     <div className="mt-1 flex items-center gap-2 text-[10px]">
-                                        <span className={isActive ? 'text-indigo-600' : 'text-slate-400'}>
+                                        <span className={isActive ? 'text-sky-700' : 'text-slate-400'}>
                                             {s.steps.length} turns
                                         </span>
                                         {timeStr && (
                                             <>
-                                                <span className={isActive ? 'text-indigo-400' : 'text-slate-400'}>•</span>
-                                                <span className={isActive ? 'text-indigo-600' : 'text-slate-400'}>
+                                                <span className={isActive ? 'text-sky-500' : 'text-slate-400'}>•</span>
+                                                <span className={isActive ? 'text-sky-700' : 'text-slate-400'}>
                                                     {timeStr}
                                                 </span>
                                             </>
@@ -209,9 +224,9 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                         })
                     )}
                 </div>
-                <div className="p-2 border-t border-slate-50">
+                <div className="p-2 border-t border-sky-200">
                     <button
-                        className="w-full text-[10px] text-slate-500 hover:text-indigo-600 font-medium flex items-center justify-center gap-1 transition-colors"
+                        className="w-full text-[10px] text-slate-500 hover:text-sky-700 font-medium flex items-center justify-center gap-1 transition-colors"
                         onClick={() => undefined}
                     >
                         {locale === 'zh' ? '查看全部历史' : 'View all history'} <span>→</span>
@@ -219,8 +234,8 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                 </div>
             </div>
 
-            <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col min-h-0">
-                <div className="flex items-center gap-2 text-indigo-900 border-b border-indigo-50 pb-2 mb-3 shrink-0">
+            <div className="flex-1 bg-sky-50/70 rounded-xl shadow-sm border border-sky-200 p-4 flex flex-col min-h-0">
+                <div className="flex items-center gap-2 text-sky-900 border-b border-sky-200 pb-2 mb-3 shrink-0">
                     <Activity size={16} />
                     <h3 className="font-bold text-xs uppercase tracking-wide">Utility Monitor</h3>
                 </div>
@@ -231,7 +246,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                             <span className="text-[10px] font-semibold text-slate-500">Token Throughput</span>
                             <div className="flex gap-2 text-[8px]">
                                 <span className="flex items-center gap-0.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> Ours
+                                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span> Ours
                                 </span>
                                 <span className="flex items-center gap-0.5 text-slate-400">
                                     <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> Base
@@ -241,7 +256,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                         <div className="flex-1 w-full min-h-0 overflow-hidden relative">
                             <ResponsiveContainer width="99%" height="100%" debounce={50}>
                                 <LineChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                     <XAxis dataKey="step" hide />
                                     <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
                                     <Tooltip
@@ -262,7 +277,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                                     <Line
                                         type="monotone"
                                         dataKey="tokens"
-                                        stroke="#6366f1"
+                                        stroke="#0ea5e9"
                                         strokeWidth={2}
                                         dot={{ r: 2 }}
                                         activeDot={{ r: 4 }}
@@ -278,7 +293,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                             <span className="text-[10px] font-semibold text-slate-500">Step Latency (s)</span>
                             <div className="flex gap-2 text-[8px]">
                                 <span className="flex items-center gap-0.5">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Ours
+                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Ours
                                 </span>
                                 <span className="flex items-center gap-0.5 text-slate-400">
                                     <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> Base
@@ -288,7 +303,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                         <div className="flex-1 w-full min-h-0 overflow-hidden relative">
                             <ResponsiveContainer width="99%" height="100%" debounce={50}>
                                 <LineChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                     <XAxis dataKey="step" hide />
                                     <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} width={20} />
                                     <Tooltip
@@ -309,7 +324,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                                     <Line
                                         type="monotone"
                                         dataKey="latency"
-                                        stroke="#f43f5e"
+                                        stroke="#fb7185"
                                         strokeWidth={2}
                                         dot={{ r: 2 }}
                                         activeDot={{ r: 4 }}
@@ -326,6 +341,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
 
     return (
         <MainLayout
+            variant="add_agent"
             left={leftPanel}
             middle={
                 <FlowFeed
