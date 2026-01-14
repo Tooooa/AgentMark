@@ -222,12 +222,12 @@ npm run dev
 
 ## 🔌 使用我们的插件
 
-该流程用于验证：**用户输入请求 → Swarm 生成 tools → 网关做水印采样 → Swarm 执行 tool_calls**。
+该流程用于验证：**用户输入（Add Agent 模式） → 网关做水印采样 → 工具调用执行**。
 
 ### Step 1：启动网关代理（AgentMark Proxy）
 
 ```bash
-cd /mnt/c/Users/25336/Desktop/AgentMarkWeb
+cd AgentMark
 source ~/miniconda3/etc/profile.d/conda.sh && conda activate AgentMark
 
 export DEEPSEEK_API_KEY=sk-你的key
@@ -238,29 +238,32 @@ export AGENTMARK_TOOL_MODE=proxy   # 网关构造 tool_calls
 uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
 ```
 
-### Step 2：启动前端（可视化）
+### Step 2：启动后端
 
 ```bash
-cd /mnt/c/Users/25336/Desktop/AgentMarkWeb/dashboard
+cd AgentMark
+conda activate AgentMark
+python dashboard/server/app.py
+```
+
+### Step 3：启动前端（可视化）
+
+```bash
+cd AgentMark
+cd dashboard
 npm install
 npm run dev
 ```
 
 浏览器访问：`http://localhost:5173`
 
-### Step 3：运行 openai/swarm 一次示例（外部 Agent）
+### Step 4：在前端使用 Add Agent 模式
 
-```bash
-cd /mnt/c/Users/25336/Desktop/AgentMarkWeb/swarm
-pip install -e .
+- 打开浏览器进入 Dashboard。
+- 在欢迎页选择 **Add Agent** 模式。
+- 填入 API Key（DeepSeek/OpenAI）与可选的 Repo URL，然后发送消息。
 
-export OPENAI_BASE_URL=http://localhost:8001/v1
-export OPENAI_API_KEY=anything
-
-python -m pytest -q examples/weather_agent/evals.py -k test_calls_weather_when_asked --disable-warnings -s
-```
-
-### Step 4：验证日志
+### Step 5：验证日志
 
 在 **网关代理终端** 可看到：
 
@@ -270,7 +273,7 @@ python -m pytest -q examples/weather_agent/evals.py -k test_calls_weather_when_a
 
 在 **前端** 可查看会话与水印分布可视化。
 
-> 说明：Swarm 的工具候选来自 `agent.functions`，用户输入只是消息内容。网关从 `tools` 抽候选进行水印采样。
+> 说明：网关从请求的 `tools` 参数中抽取候选工具并进行水印采样。
 
 ---
 

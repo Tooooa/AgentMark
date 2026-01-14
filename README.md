@@ -223,7 +223,7 @@ Visit `http://localhost:5173` or `http://127.0.0.1:5173` in your browser.
 
 This flow validates the "tool calling + watermark sampling" plugin route: external agents don't modify business code, only change the endpoint address (OPENAI_BASE_URL).
 
-**Workflow**: **User input request → Swarm generates tools → Gateway performs watermark sampling → Swarm executes tool_calls**.
+**Workflow**: **User input (Add Agent mode) → Gateway performs watermark sampling → Tool calls executed**.
 
 ### Step 1: Start Gateway Proxy (AgentMark Proxy)
 
@@ -231,7 +231,7 @@ Open Terminal 1:
 
 **Linux/macOS:**
 ```bash
-cd /path/to/AgentMarkWeb
+cd AgentMark
 source ~/miniconda3/etc/profile.d/conda.sh && conda activate AgentMark
 
 export DEEPSEEK_API_KEY=sk-your-key
@@ -244,7 +244,7 @@ uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
 
 **Windows PowerShell:**
 ```powershell
-cd D:\path\to\AgentMarkWeb
+cd AgentMark
 conda activate AgentMark
 
 $env:DEEPSEEK_API_KEY="sk-your-key"
@@ -255,11 +255,22 @@ $env:AGENTMARK_TOOL_MODE="proxy"
 uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
 ```
 
-### Step 2: Start Frontend (Visualization Dashboard)
+### Step 2: Start Dashboard Backend
 
 Open Terminal 2:
 
 ```bash
+cd AgentMark
+conda activate AgentMark
+python dashboard/server/app.py
+```
+
+### Step 3: Start Frontend (Visualization Dashboard)
+
+Open Terminal 3:
+
+```bash
+cd AgentMark
 cd dashboard
 npm install  # Only needed first time
 npm run dev
@@ -269,33 +280,13 @@ Browser access: `http://localhost:5173`
 
 You can view sessions and watermark visualizations on the frontend.
 
-### Step 3: Run Your Agent (Using Swarm as Example)
+### Step 4: Use Add Agent Mode in the Dashboard
 
-Open Terminal 3:
+- Open the dashboard in your browser.
+- Select **Add Agent** on the welcome screen.
+- Fill in your API key (DeepSeek/OpenAI) and optional repo URL, then send a message.
 
-**Linux/macOS:**
-```bash
-cd swarm
-pip install -e .
-
-export OPENAI_BASE_URL=http://localhost:8001/v1
-export OPENAI_API_KEY=anything
-
-python -m pytest -q examples/weather_agent/evals.py -k test_calls_weather_when_asked --disable-warnings -s
-```
-
-**Windows PowerShell:**
-```powershell
-cd swarm
-pip install -e .
-
-$env:OPENAI_BASE_URL="http://localhost:8001/v1"
-$env:OPENAI_API_KEY="anything"
-
-python -m pytest -q examples/weather_agent/evals.py -k test_calls_weather_when_asked --disable-warnings -s
-```
-
-### Step 4: Verify Watermark Injection
+### Step 5: Verify Watermark Injection
 
 In the **gateway proxy terminal** you should see:
 
@@ -308,7 +299,7 @@ In the **frontend dashboard** you can:
 - Visualize watermark distribution and statistics
 - Analyze watermark decoding results
 
-> **Note**: Swarm's candidate tools come from `agent.functions`, and user input is just message content. The gateway extracts candidate tools from the request's `tools` parameter and performs watermark sampling selection.
+> **Note**: The gateway extracts candidate tools from the request's `tools` parameter and performs watermark sampling selection.
 
 ---
 

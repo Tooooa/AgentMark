@@ -27,7 +27,7 @@ if SWARM_ROOT.exists():
 
 from agentmark.core.rlnc_codec import DeterministicRLNC
 from agentmark.core.watermark_sampler import sample_behavior_differential
-from agentmark.sdk.prompt_adapter import extract_json_payload
+from agentmark.sdk.prompt_adapter import extract_json_payload, get_prompt_instruction
 
 # --- Database Setup ---
 from dashboard.server.database import ConversationDB
@@ -377,6 +377,46 @@ def _get_add_agent_candidates() -> List[str]:
     return candidates
 
 
+def _build_add_agent_scoring_messages(user_message: str) -> List[Dict[str, str]]:
+    instr = get_prompt_instruction()
+    messages: List[Dict[str, str]] = [
+        {"role": "system", "content": ADD_AGENT_SYSTEM_PROMPT},
+        {"role": "user", "content": user_message.strip()},
+    ]
+
+    candidates = _get_add_agent_candidates()
+    if candidates:
+        user_lines = "候选动作：\n" + "\n".join(f"- {c}" for c in candidates)
+        tool_lines = ""
+        tool_specs = []
+        for tool in ADD_AGENT_TOOLS:
+            if not isinstance(tool, dict):
+                continue
+            fn = tool.get("function", {}) if isinstance(tool.get("function"), dict) else tool
+            name = fn.get("name") or tool.get("name")
+            params = fn.get("parameters", {}) or {}
+            props = params.get("properties", {}) if isinstance(params, dict) else {}
+            if name:
+                if props:
+                    keys = ", ".join(props.keys())
+                    tool_specs.append(f"- {name}({keys})")
+                else:
+                    tool_specs.append(f"- {name}(...)")
+        if tool_specs:
+            tool_lines = "\n可用工具参数：\n" + "\n".join(tool_specs)
+        for msg in reversed(messages):
+            if msg["role"] == "user":
+                msg["content"] = (msg["content"] or "") + "\n" + user_lines + tool_lines
+                break
+        else:
+            messages.append({"role": "user", "content": user_lines + tool_lines})
+
+    injected = [{"role": "system", "content": instr}]
+    injected.extend(messages)
+    injected[0]["content"] += "\n[AgentMark mode=tools]"
+    return injected
+
+
 class AddAgentSession:
     def __init__(self, session_id: str, api_key: str, repo_url: str):
         self.session_id = session_id
@@ -545,6 +585,13 @@ def _build_baseline_step(
         action = action_name
 
     distribution: List[Dict[str, Any]] = []
+    parsed_payload: Dict[str, Any] = {}
+    if content:
+        try:
+            parsed_payload = extract_json_payload(content)
+        except Exception:
+            parsed_payload = {}
+
     if candidates:
         ordered = list(dict.fromkeys(candidates))
         if action_name and action_name not in ordered:
@@ -572,13 +619,52 @@ def _build_baseline_step(
             }
             for name in ordered
         ]
+        if not action_name and prob_map:
+            action_name = max(prob_map.items(), key=lambda x: x[1])[0]
+
+    if not action_name and isinstance(parsed_payload, dict):
+        payload_action = parsed_payload.get("action") or parsed_payload.get("tool")
+        if payload_action:
+            action_name = str(payload_action)
+
+    action_args = None
+    if isinstance(parsed_payload, dict):
+        raw_args = parsed_payload.get("action_args")
+        if isinstance(raw_args, dict) and action_name:
+            if action_name in raw_args:
+                action_args = raw_args.get(action_name)
+            else:
+                action_args = raw_args
+        elif raw_args is not None:
+            action_args = raw_args
+
+    if action_args is not None:
+        try:
+            tool_details = json.dumps(action_args, ensure_ascii=False)
+        except Exception:
+            tool_details = str(action_args)
+
+    if action_name:
+        if action_name == "Finish":
+            step_type = "finish"
+            if isinstance(action_args, dict) and action_args.get("final_answer"):
+                final_answer = action_args.get("final_answer")
+        else:
+            step_type = "tool"
+        action = f"Call: {action_name}" if action_name else action
+    if step_type == "tool":
+        final_answer = None
 
     tokens_used = _extract_tokens_used(completion)
     if latency <= 0:
         latency = 0.001
 
+    thought = _extract_thought_from_raw_output(content)
+    if not thought:
+        thought = "no thought"
+
     return {
-        "thought": "",
+        "thought": thought,
         "action": action,
         "toolDetails": tool_details,
         "distribution": distribution,
@@ -1010,10 +1096,11 @@ async def add_agent_turn(req: AddAgentTurnRequest):
         base_started = time.time()
         try:
             base_client = _build_base_llm_client(req.apiKey or session.api_key)
+            base_messages = _build_add_agent_scoring_messages(req.message.strip())
             base_completion = base_client.chat.completions.create(
                 model=_resolve_base_model(model_name),
-                messages=messages,
-                tools=ADD_AGENT_TOOLS,
+                messages=base_messages,
+                temperature=0.0,
             )
             base_latency = time.time() - base_started
             baseline_step = _build_baseline_step(
