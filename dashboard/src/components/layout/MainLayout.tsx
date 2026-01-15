@@ -21,7 +21,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ left, middle, right, onHome, on
     return (
         <div className="h-screen bg-slate-50 flex flex-col font-sans overflow-hidden">
             {/* Header - Fixed Height */}
-            <header className="flex-none px-6 py-4 bg-white/80 backdrop-blur border-b border-indigo-100 flex justify-between items-center z-10">
+            <header className="flex-none px-6 py-4 bg-white/80 backdrop-blur border-b border-slate-200 flex justify-between items-center z-10">
                 <div className="flex items-center gap-3">
                     <img src="/logo.svg" alt="AgentMark Logo" className="h-10 w-auto" />
                     <img src="/logo_1.svg" alt="AgentMark Text" className="h-6 w-auto mt-1" />

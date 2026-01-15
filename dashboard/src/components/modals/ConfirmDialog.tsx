@@ -73,11 +73,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     </button>
                     <button
                         onClick={handleConfirm}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                            isDestructive
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${isDestructive
                                 ? 'bg-red-600 hover:bg-red-700 text-white'
                                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                        }`}
+                            }`}
                     >
                         {confirmText || (locale === 'zh' ? '确认' : 'Confirm')}
                     </button>

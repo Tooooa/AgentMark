@@ -16,6 +16,7 @@ interface ComparisonViewProps {
     evaluationRef?: React.RefObject<HTMLDivElement>;
     utilityMonitorRef?: React.RefObject<HTMLDivElement>;
     chartRef?: React.RefObject<HTMLDivElement>;
+    variant?: 'default' | 'add_agent';
 }
 
 // 1221: Segment structure for aligning user questions
@@ -34,8 +35,10 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
     promptInstruction,
     evaluationRef,
     utilityMonitorRef,
-    chartRef
+    chartRef,
+    variant = 'default'
 }) => {
+    const isAddAgent = variant === 'add_agent';
     const { locale } = useI18n();
 
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -119,7 +122,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                     <div className="flex-1">
                         <div className="bg-white border border-slate-200 rounded-2xl p-5 text-sm shadow-sm flex items-center gap-4">
                             <div className="flex-shrink-0">
-                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
                                     <User size={16} />
                                 </div>
                             </div>
@@ -148,6 +151,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
         );
     };
 
+
     return (
         <div className="h-full flex flex-col gap-4">
             {/* Main Content - Single scrollable container with aligned segments */}
@@ -162,8 +166,14 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                         <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
                             <span className="font-bold text-slate-600 text-sm">{locale === 'zh' ? '无水印Agent' : 'Original (Base)'}</span>
                         </div>
-                        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl shadow-sm">
-                            <span className="font-bold text-indigo-700 text-sm">{locale === 'zh' ? '有水印Agent' : 'Ours (Watermarked)'}</span>
+                        <div className={`p-3 rounded-xl shadow-sm ${
+                            isAddAgent 
+                                ? 'bg-amber-50 border border-amber-200' 
+                                : 'bg-indigo-50 border border-indigo-200'
+                        }`}>
+                            <span className={`font-bold text-sm ${
+                                isAddAgent ? 'text-amber-700' : 'text-indigo-700'
+                            }`}>{locale === 'zh' ? '有水印Agent' : 'Ours (Watermarked)'}</span>
                         </div>
                     </div>
                 </div>
@@ -194,6 +204,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                                                     showWatermarkDetails={false}
                                                     showDistribution={false}
                                                     displayIndex={prevBaselineCount + stepIdx + 1}
+                                                    variant={variant}
                                                 />
                                             ))
                                         ) : (
@@ -204,7 +215,9 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                                     </div>
 
                                     {/* Right: Watermarked steps */}
-                                    <div ref={segIndex === 0 ? chartRef : undefined} className="space-y-4 p-2 bg-white rounded-indigo-xl border border-indigo-100">
+                                    <div ref={segIndex === 0 ? chartRef : undefined} className={`space-y-4 p-2 bg-white rounded-xl border ${
+                                        isAddAgent ? 'border-amber-100' : 'border-indigo-100'
+                                    }`}>
                                         {segment.watermarkedSteps.length > 0 ? (
                                             segment.watermarkedSteps.map((step, stepIdx) => (
                                                 <StepCard
@@ -213,6 +226,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                                                     isErased={erasedIndices.has(step.stepIndex)}
                                                     showWatermarkDetails={true}
                                                     displayIndex={prevWatermarkedCount + stepIdx + 1}
+                                                    variant={variant}
                                                 />
                                             ))
                                         ) : (

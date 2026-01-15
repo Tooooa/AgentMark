@@ -31,7 +31,7 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
             console.log('Tutorial tooltip - mode:', mode, 'step:', step);
             console.log('  rect.top:', rect.top, 'rect.left:', rect.left, 'rect.right:', rect.right, 'rect.bottom:', rect.bottom);
             console.log('  rect.width:', rect.width, 'rect.height:', rect.height);
-            
+
             // 根据步骤决定提示框位置
             let tooltipTop = 0;
             let tooltipLeft = 0;
@@ -170,7 +170,7 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
                     en: 'Enter new prompts in the input box to continue multi-turn conversations with the Agent. The system displays real-time execution steps and watermark embedding status.'
                 }
             };
-            
+
             return content[step as keyof typeof content]?.[locale] || '';
         }
     };
@@ -180,7 +180,7 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
             {isOpen && (
                 <>
                     {/* 遮罩层 - 阻止点击其他区域 */}
-                    <div 
+                    <div
                         className="fixed inset-0 z-[200]"
                         style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
                     />

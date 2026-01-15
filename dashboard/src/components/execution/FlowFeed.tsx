@@ -114,17 +114,17 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                     <div className="flex justify-end pr-2">
                         <div className="flex gap-4 flex-row-reverse max-w-[80%]">
                             <div className="flex-shrink-0 mt-1">
-                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isAddAgent ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
                                     <User size={18} />
                                 </div>
                             </div>
                             <div className="flex-1 text-right">
-                                <div className="bg-indigo-50 border border-indigo-100 rounded-2xl rounded-tr-none p-5 text-indigo-900 text-sm shadow-sm inline-block text-left relative overflow-hidden">
+                                <div className={`rounded-2xl rounded-tr-none p-5 text-sm shadow-sm inline-block text-left relative overflow-hidden ${isAddAgent ? 'bg-amber-50/50 border border-amber-100/50 text-amber-800' : 'bg-indigo-50 border border-indigo-100 text-indigo-900'}`}>
                                     {/* Decorative background element */}
-                                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-100/50 to-transparent rounded-bl-full pointer-events-none" />
+                                    <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-br to-transparent rounded-bl-full pointer-events-none ${isAddAgent ? 'from-amber-100/30' : 'from-indigo-100/50'}`} />
 
-                                    <p className="font-bold text-[10px] text-indigo-400 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-                                        <div className="w-1 h-1 rounded-full bg-indigo-400" />
+                                    <p className={`font-bold text-[10px] mb-2 uppercase tracking-wider flex items-center gap-1.5 ${isAddAgent ? 'text-amber-400' : 'text-indigo-400'}`}>
+                                        <div className={`w-1 h-1 rounded-full ${isAddAgent ? 'bg-amber-400' : 'bg-indigo-400'}`} />
                                         {userQueryLabel || "User Prompt"}
                                     </p>
                                     {userQueryFormat === 'json' ? (
@@ -138,8 +138,8 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                                     )}
                                 </div>
                                 {userInputHighlight && (
-                                    <div className="mt-3 bg-white/95 border border-indigo-100 rounded-xl p-3 text-left text-slate-700 shadow-sm">
-                                        <p className="font-bold text-[10px] text-indigo-500 mb-1 uppercase tracking-wide">
+                                    <div className={`mt-3 bg-white/95 rounded-xl p-3 text-left text-slate-700 shadow-sm ${isAddAgent ? 'border border-amber-100' : 'border border-indigo-100'}`}>
+                                        <p className={`font-bold text-[10px] mb-1 uppercase tracking-wide ${isAddAgent ? 'text-amber-500' : 'text-indigo-500'}`}>
                                             {userInputLabel || "User Input"}
                                         </p>
                                         <div className="text-xs font-mono whitespace-pre-wrap break-words">
@@ -163,8 +163,8 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
 
                 {visibleSteps.length === 0 && !userQuery && (
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-4 py-20">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center">
-                            <Bot size={32} className="text-indigo-300" />
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isAddAgent ? 'bg-gradient-to-br from-amber-50 to-yellow-50' : 'bg-gradient-to-br from-indigo-50 to-blue-50'}`}>
+                            <Bot size={32} className={isAddAgent ? 'text-amber-300' : 'text-indigo-300'} />
                         </div>
                         <div className="text-center">
                             <p className="text-lg font-medium text-slate-600 mb-1">
@@ -189,6 +189,7 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                             step={step}
                             isErased={erasedIndices.has(step.stepIndex)}
                             displayIndex={step.stepType === 'user_input' ? undefined : displayIndex}
+                            variant={variant}
                         />
                     );
                 })}
@@ -219,16 +220,16 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                                                     setContinueInput(s.userQuery);
                                                     setShowPrompts(false);
                                                 }}
-                                                className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 group border-b border-slate-50 last:border-0 transition-colors"
+                                                className={`w-full text-left px-4 py-3 flex items-center gap-3 group border-b border-slate-50 last:border-0 transition-colors ${isAddAgent ? 'hover:bg-amber-50' : 'hover:bg-indigo-50'}`}
                                             >
-                                                <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-200 transaction-colors">
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transaction-colors ${isAddAgent ? 'bg-amber-100 text-amber-600 group-hover:bg-amber-200' : 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200'}`}>
                                                     <Sparkles size={14} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-bold text-slate-500 mb-0.5">
                                                         {locale === 'zh' ? s.title.zh : s.title.en}
                                                     </p>
-                                                    <p className="text-sm text-slate-700 group-hover:text-indigo-700 font-medium truncate">
+                                                    <p className={`text-sm text-slate-700 font-medium truncate ${isAddAgent ? 'group-hover:text-amber-700' : 'group-hover:text-indigo-700'}`}>
                                                         {s.userQuery}
                                                     </p>
                                                 </div>
@@ -239,8 +240,8 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                             </>
                         )}
 
-                        <div className="bg-white rounded-2xl p-4 shadow-xl border border-indigo-100 ring-1 ring-indigo-50/50 backdrop-blur-sm">
-                            <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide mb-2 flex items-center gap-2">
+                        <div className={`bg-white rounded-2xl p-4 shadow-xl ring-1 backdrop-blur-sm ${isAddAgent ? 'border border-amber-100 ring-amber-50/50' : 'border border-indigo-100 ring-indigo-50/50'}`}>
+                            <p className={`text-xs font-bold uppercase tracking-wide mb-2 flex items-center gap-2 ${isAddAgent ? 'text-amber-500' : 'text-indigo-500'}`}>
                                 <Bot size={14} /> {locale === 'zh' ? '继续任务' : 'Continue Task'}
                             </p>
                             <div className="relative z-10 flex gap-3 items-center">
@@ -251,7 +252,8 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                                     value={continueInput}
                                     onChange={(e) => setContinueInput(e.target.value)}
                                     placeholder={locale === 'zh' ? "输入新指令继续..." : "Input new prompt to continue..."}
-                                    className={`flex-1 bg-white/80 border border-indigo-100/80 rounded-2xl px-5 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200/70 transition-all shadow-inner
+                                    className={`flex-1 bg-white/80 rounded-2xl px-5 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all shadow-inner
+                                        ${isAddAgent ? 'border border-amber-100/80 focus:border-amber-400 focus:ring-amber-200/70' : 'border border-indigo-100/80 focus:border-indigo-400 focus:ring-indigo-200/70'}
                                         ${(isSending || isPlaying) ? 'opacity-70 bg-slate-100 cursor-not-allowed' : ''}`}
                                     disabled={isSending || isPlaying}
                                     onFocus={() => setShowPrompts(true)}
@@ -276,7 +278,9 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                                     className={`rounded-2xl px-6 py-2.5 text-sm font-semibold transition-all flex items-center gap-2
                                         ${isSending || isPlaying
                                             ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                            : 'bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white shadow-[0_10px_24px_rgba(59,130,246,0.35)] hover:from-sky-400 hover:via-blue-500 hover:to-indigo-500 hover:shadow-[0_16px_30px_rgba(59,130,246,0.45)]'}`}
+                                            : isAddAgent
+                                                ? 'bg-amber-100 hover:bg-amber-200 text-amber-700 shadow-md hover:shadow-lg'
+                                                : 'bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white shadow-[0_10px_24px_rgba(59,130,246,0.35)] hover:from-sky-400 hover:via-blue-500 hover:to-indigo-500 hover:shadow-[0_16px_30px_rgba(59,130,246,0.45)]'}`}
                                     disabled={isSending || isPlaying}
                                     onClick={async () => {
                                         const val = continueInput.trim();

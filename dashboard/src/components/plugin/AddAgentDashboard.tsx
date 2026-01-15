@@ -258,13 +258,13 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
 
     const leftPanel = (
         <div className="flex flex-col gap-6 h-full text-slate-900">
-            <div className="rounded-2xl bg-white/85 border border-indigo-100/80 shadow-sm p-1 flex items-center gap-1">
+            <div className="rounded-2xl bg-white/85 border border-amber-100/80 shadow-sm p-1 flex items-center gap-1">
                 <button
                     onClick={() => setIsComparisonMode(false)}
                     className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
                         !isComparisonMode
-                            ? 'bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white shadow shadow-blue-200/60'
-                            : 'text-slate-500 hover:bg-sky-50'
+                            ? 'bg-amber-100 text-amber-700 shadow shadow-amber-200/60'
+                            : 'text-slate-500 hover:bg-amber-50'
                     }`}
                 >
                     {locale === 'zh' ? '标准' : 'Standard'}
@@ -273,8 +273,8 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                     onClick={() => setIsComparisonMode(true)}
                     className={`flex-1 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${
                         isComparisonMode
-                            ? 'bg-gradient-to-r from-cyan-500 via-sky-500 to-indigo-500 text-white shadow shadow-cyan-200/60'
-                            : 'text-slate-500 hover:bg-cyan-50'
+                            ? 'bg-amber-100 text-amber-700 shadow shadow-amber-200/60'
+                            : 'text-slate-500 hover:bg-amber-50'
                     }`}
                 >
                     <Columns size={12} />
@@ -289,7 +289,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                         className={`w-full py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm ${
                             isEvaluating
                                 ? 'bg-amber-50 text-amber-500 cursor-wait'
-                                : 'bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 text-white shadow-yellow-200/60 hover:shadow-amber-200/60'
+                                : 'bg-amber-100 text-amber-700 shadow-amber-200/60 hover:bg-amber-200'
                         }`}
                     >
                         {isEvaluating ? (
@@ -299,7 +299,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                             </>
                         ) : (
                             <>
-                                <Award size={14} className="text-amber-100" />
+                                <Award size={14} className="text-amber-600" />
                                 {locale === 'zh' ? '评估智能体' : 'Evaluate Agents'}
                             </>
                         )}
@@ -328,13 +328,15 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                     )}
                 </>
             )}
-            <button
-                onClick={handleNewChat}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 text-white font-semibold shadow-lg shadow-yellow-500/30 hover:shadow-amber-500/40 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 tracking-wide group"
-            >
-                <PlusCircle size={18} className="text-white/90 group-hover:text-white" />
-                {locale === 'zh' ? '新对话' : 'New Chat'}
-            </button>
+            {!isComparisonMode && (
+                <button
+                    onClick={handleNewChat}
+                    className="w-full py-3.5 px-4 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 tracking-wide group"
+                >
+                    <PlusCircle size={18} className="text-amber-600 group-hover:text-amber-700" />
+                    {locale === 'zh' ? '新对话' : 'New Chat'}
+                </button>
+            )}
 
             <div className="h-60 bg-white/80 rounded-2xl shadow-[0_25px_60px_-35px_rgba(15,23,42,0.45)] border border-amber-100/70 ring-1 ring-amber-100/60 overflow-hidden flex flex-col shrink-0">
                 <div className="p-3 border-b border-amber-100/70 bg-amber-50/60 flex items-center justify-between">
@@ -531,12 +533,6 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
 
     return (
         <div className="relative h-screen overflow-hidden bg-slate-50">
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div className="absolute -top-32 left-1/2 h-[28rem] w-[46rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-sky-200/55 via-indigo-200/45 to-purple-200/40 blur-[110px]" />
-                <div className="absolute top-16 -left-24 h-96 w-96 rounded-full bg-cyan-200/40 blur-[130px]" />
-                <div className="absolute -bottom-40 right-0 h-[30rem] w-[30rem] rounded-full bg-blue-200/45 blur-[140px]" />
-                <div className="absolute bottom-10 left-1/3 h-72 w-72 rounded-full bg-sky-200/35 blur-[120px]" />
-            </div>
             <MainLayout
                 variant="add_agent"
                 layout={isComparisonMode ? 'compare' : 'standard'}
@@ -550,6 +546,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                             userQuery={gatewayPromptText || promptUserInput}
                             promptInstruction={PROMPT_INSTRUCTION}
                             evaluationResult={evaluationResult}
+                            variant="add_agent"
                         />
                     ) : (
                         <FlowFeed
@@ -563,6 +560,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                             onContinue={handleContinue}
                             isPlaying={isSending}
                             promptInputRef={promptInputRef}
+                            variant="add_agent"
                         />
                     )
                 }
@@ -575,6 +573,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                             erasureRate={erasureRate}
                             setErasureRate={setErasureRate}
                             promptInputRef={promptInputRef}
+                            variant="add_agent"
                         />
                     )
                 }
@@ -585,6 +584,7 @@ const AddAgentDashboard: React.FC<AddAgentDashboardProps> = ({
                 onClose={() => setIsEvaluationModalOpen(false)}
                 result={evaluationResult}
                 isLoading={isEvaluating}
+                variant="add_agent"
             />
         </div>
     );

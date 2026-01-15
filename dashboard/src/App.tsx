@@ -530,8 +530,8 @@ function AppContent() {
                       }}
                       disabled={selectedScenarios.size === 0}
                       className={`px-3 py-1.5 text-xs rounded-md transition-colors flex items-center gap-1.5 border ${selectedScenarios.size > 0
-                          ? 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200'
-                          : 'text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed'
+                        ? 'text-red-700 bg-red-50 hover:bg-red-100 border-red-200'
+                        : 'text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed'
                         }`}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -622,12 +622,12 @@ function AppContent() {
                       <div
                         key={scenario.id}
                         className={`p-4 rounded-lg border-2 transition-all hover:shadow-lg relative ${isBatchMode
-                            ? isSelected
-                              ? 'border-blue-500 bg-blue-50 cursor-pointer'
-                              : 'border-gray-200 hover:border-blue-300 cursor-pointer'
-                            : scenario.id === activeScenarioId
-                              ? 'border-blue-500 bg-blue-50 cursor-pointer'
-                              : 'border-gray-200 hover:border-blue-300 cursor-pointer'
+                          ? isSelected
+                            ? 'border-blue-500 bg-blue-50 cursor-pointer'
+                            : 'border-gray-200 hover:border-blue-300 cursor-pointer'
+                          : scenario.id === activeScenarioId
+                            ? 'border-blue-500 bg-blue-50 cursor-pointer'
+                            : 'border-gray-200 hover:border-blue-300 cursor-pointer'
                           }`}
                         onClick={() => {
                           if (isBatchMode) {
@@ -648,8 +648,8 @@ function AppContent() {
                         {isBatchMode && (
                           <div className="absolute top-2 left-2 z-10">
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected
-                                ? 'bg-blue-500 border-blue-500'
-                                : 'bg-white border-gray-300'
+                              ? 'bg-blue-500 border-blue-500'
+                              : 'bg-white border-gray-300'
                               }`}>
                               {isSelected && (
                                 <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -684,8 +684,8 @@ function AppContent() {
                                   togglePin(scenario.id);
                                 }}
                                 className={`p-1 rounded transition-colors ${(scenario as any).isPinned
-                                    ? 'text-amber-600 hover:bg-amber-50'
-                                    : 'text-gray-400 hover:bg-gray-100 hover:text-amber-600'
+                                  ? 'text-amber-600 hover:bg-amber-50'
+                                  : 'text-gray-400 hover:bg-gray-100 hover:text-amber-600'
                                   }`}
                                 title={locale === 'zh' ? ((scenario as any).isPinned ? '取消置顶' : '置顶') : ((scenario as any).isPinned ? 'Unpin' : 'Pin')}
                               >
