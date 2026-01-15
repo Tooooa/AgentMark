@@ -114,12 +114,50 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
     }, [visibleSteps]);
 
     const renderUserQueryPair = (query: string, key: string) => {
-        const rightQuery = promptInstruction ? `${query}\n\n${promptInstruction}` : query;
+        // 插件模式显示两个（用户提问 + 用户提问+指令），普通模式只显示一个居中
+        if (isAddAgent && promptInstruction) {
+            const rightQuery = `${query}\n\n${promptInstruction}`;
+            return (
+                <div key={key} className="col-span-2 my-4">
+                    <div className="w-full bg-gradient-to-r from-indigo-50/50 to-violet-50/50 border border-indigo-100 rounded-2xl p-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="flex-1">
+                                <div className="bg-white border border-slate-200 rounded-2xl p-5 text-sm shadow-sm flex items-center gap-4">
+                                    <div className="flex-shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                            <User size={16} />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-[10px] text-slate-400 mb-1 uppercase tracking-wide">{locale === 'zh' ? '用户提问' : 'User Question'}</p>
+                                        <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{query}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1">
+                                <div className="bg-white border border-slate-200 rounded-2xl p-5 text-sm shadow-sm flex items-center gap-4">
+                                    <div className="flex-shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                            <User size={16} />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-[10px] text-slate-400 mb-1 uppercase tracking-wide">{locale === 'zh' ? '用户提问 + 指令' : 'User Question + Instruction'}</p>
+                                        <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{rightQuery}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // 普通模式：只显示一个居中的用户提问
         return (
-        <div key={key} className="col-span-2 my-4">
-            <div className="w-full bg-gradient-to-r from-indigo-50/50 to-violet-50/50 border border-indigo-100 rounded-2xl p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="flex-1">
+            <div key={key} className="col-span-2 my-4">
+                <div className="w-full flex justify-center">
+                    <div className="max-w-2xl w-full bg-gradient-to-r from-indigo-50/50 to-violet-50/50 border border-indigo-100 rounded-2xl p-5">
                         <div className="bg-white border border-slate-200 rounded-2xl p-5 text-sm shadow-sm flex items-center gap-4">
                             <div className="flex-shrink-0">
                                 <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
@@ -132,22 +170,8 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                             </div>
                         </div>
                     </div>
-                    <div className="flex-1">
-                        <div className="bg-white border border-slate-200 rounded-2xl p-5 text-sm shadow-sm flex items-center gap-4">
-                            <div className="flex-shrink-0">
-                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                                    <User size={16} />
-                                </div>
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-bold text-[10px] text-slate-400 mb-1 uppercase tracking-wide">{locale === 'zh' ? '用户提问 + 指令' : 'User Question + Instruction'}</p>
-                                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{rightQuery}</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
-        </div>
         );
     };
 
