@@ -20,6 +20,49 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 SWARM_ROOT = PROJECT_ROOT / "swarm"
 TOOL_DATA_ROOT = PROJECT_ROOT / "experiments/toolbench/data/data/toolenv/tools"
 
+
+def _load_root_dotenv() -> None:
+    """Best-effort loader for PROJECT_ROOT/.env without external deps."""
+    env_path = PROJECT_ROOT / ".env"
+    if not env_path.exists():
+        return
+
+    try:
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if not key:
+                continue
+            os.environ.setdefault(key, value)
+    except Exception:
+        # Avoid breaking server startup due to .env formatting issues.
+        return
+
+
+def _resolve_api_key(request_api_key: Optional[str]) -> str:
+    candidate = (request_api_key or "").strip()
+    if candidate:
+        return candidate
+    env_key = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+    if env_key:
+        return env_key
+    env_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    if env_key:
+        return env_key
+    raise HTTPException(
+        status_code=400,
+        detail="Missing API key. Provide apiKey in request or set DEEPSEEK_API_KEY (preferred) / OPENAI_API_KEY in environment.",
+    )
+
+
+_load_root_dotenv()
+
 import sys
 sys.path.append(str(PROJECT_ROOT))
 if SWARM_ROOT.exists():
@@ -899,12 +942,12 @@ def _build_add_agent_step(
     }
 
 class InitRequest(BaseModel):
-    apiKey: str
+    apiKey: Optional[str] = None
     scenarioId: str
     payload: Optional[str] = None
 
 class CustomInitRequest(BaseModel):
-    apiKey: str
+    apiKey: Optional[str] = None
     query: str
     payload: Optional[str] = None
 
@@ -917,7 +960,7 @@ class ContinueRequest(BaseModel):
 
 
 class AddAgentInitRequest(BaseModel):
-    apiKey: str
+    apiKey: Optional[str] = None
     repoUrl: Optional[str] = ""
 
 
@@ -1087,7 +1130,8 @@ async def init_session(req: InitRequest):
     # Try retrieve real tools if we know the query? 
     # For now, start empty or basic.
     
-    session = Session(session_id, req.apiKey, task, req.payload)
+    api_key = _resolve_api_key(req.apiKey)
+    session = Session(session_id, api_key, task, req.payload)
     sessions[session_id] = session
     
     print(f"[INFO] Session {session_id} initialized with Payload: '{task['payload_str']}'")
@@ -1124,7 +1168,8 @@ async def init_custom_session(req: CustomInitRequest):
         "payload_str": req.payload
     }
     
-    session = Session(session_id, req.apiKey, task, req.payload)
+    api_key = _resolve_api_key(req.apiKey)
+    session = Session(session_id, api_key, task, req.payload)
     sessions[session_id] = session
     
     return {
@@ -1144,7 +1189,7 @@ async def start_add_agent_session(req: AddAgentInitRequest):
     session_id = f"agent_{int(time.time())}_{uuid.uuid4().hex[:6]}"
     add_agent_sessions[session_id] = AddAgentSession(
         session_id=session_id,
-        api_key=req.apiKey,
+        api_key=_resolve_api_key(req.apiKey),
         repo_url=req.repoUrl or "",
     )
     return {
@@ -1582,7 +1627,7 @@ def uniform_prob(commands: List[str]) -> Dict[str, float]:
     return {c: p for c in commands}
 
 class RestoreSessionRequest(BaseModel):
-    apiKey: str
+    apiKey: Optional[str] = None
     scenarioId: str
 
 @app.post("/api/restore_session")
@@ -1615,7 +1660,8 @@ async def restore_session(req: RestoreSessionRequest):
     }
     
     # 3. Create Session
-    session = Session(session_id, req.apiKey, task, task["payload_str"])
+    api_key = _resolve_api_key(req.apiKey)
+    session = Session(session_id, api_key, task, task["payload_str"])
     
     # 4. Reconstruct Trajectory from Steps
     # This is "best effort" mapping from UI-steps to internal-trajectory

@@ -14,7 +14,8 @@ export const useSimulation = () => {
 
     // Live State
     const [isLiveMode, setIsLiveMode] = useState(true);
-    const [apiKey, setApiKey] = useState("sk-7f4e6c78384e4aaab0eb0c59af411618");
+    const defaultApiKey = (import.meta as any)?.env?.DEEPSEEK_API_KEY || "";
+    const [apiKey, setApiKey] = useState(defaultApiKey);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [liveScenario, setLiveScenario] = useState<Trajectory | null>(null);
     const [isLoading, setIsLoading] = useState(false);

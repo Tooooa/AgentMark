@@ -188,6 +188,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                                     className="w-full pl-4 pr-4 py-3.5 bg-slate-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-indigo-100 focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-sm font-mono text-slate-600 placeholder:text-slate-300"
                                                 />
                                             </div>
+                                            <div className="mt-2 text-xs text-slate-400 leading-relaxed">
+                                                {locale === 'zh'
+                                                    ? '留空则用 .env 的 DEEPSEEK_API_KEY。'
+                                                    : 'Empty uses .env DEEPSEEK_API_KEY.'}
+                                            </div>
                                         </div>
                                     )}
 

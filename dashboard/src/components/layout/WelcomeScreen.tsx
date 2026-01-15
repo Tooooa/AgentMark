@@ -280,6 +280,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                             placeholder="sk-..."
                                                             className="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none transition-all text-base font-mono bg-slate-50/50"
                                                         />
+                                                        <div className="mt-2 text-xs text-slate-400 leading-relaxed">
+                                                            {locale === 'zh'
+                                                                ? '留空则用 .env 的 DEEPSEEK_API_KEY。'
+                                                                : 'Empty uses .env DEEPSEEK_API_KEY.'}
+                                                        </div>
                                                     </div>
 
                                                     {/* Prompt */}
