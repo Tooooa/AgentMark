@@ -178,6 +178,7 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                             key={`step-${index}-${step.stepIndex}`}
                             step={step}
                             isErased={erasedIndices.has(step.stepIndex)}
+                            showWatermarkDetails={true}
                             displayIndex={step.stepType === 'user_input' ? undefined : displayIndex}
                             variant={variant}
                         />

@@ -1,89 +1,21 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, PresentationControls, useCursor, useTexture } from '@react-three/drei';
+import { Float, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Configuration
-const PAGE_WIDTH = 3;
+const PAGE_WIDTH = 6;
 const PAGE_HEIGHT = 4.2;
-const PAGE_DEPTH = 0.03;
-const COVER_DEPTH = 0.08; // Thicker cover for more presence
 const CORNER_RADIUS = 0.12;
-const ROUGHNESS = 0.15; // Lower roughness for brighter paper
-const METALNESS = 0.0;
 
-interface PageProps {
-    number: number;
-    opened: boolean;
-    totalPages: number;
-    frontTexture?: THREE.Texture | null;
-    backTexture?: THREE.Texture | null;
-    isLeftPage?: boolean;
-    currentSpread: number;
-    visible?: boolean;
+interface SlideProps {
+    texture: THREE.Texture;
+    index: number;
+    offset: number;
 }
 
-function Page({ number, opened, totalPages, frontTexture, backTexture, isLeftPage = false, currentSpread, visible = true }: PageProps) {
-    const group = useRef<THREE.Group>(null);
+function Slide({ texture, index, offset }: SlideProps) {
     const meshRef = useRef<THREE.Mesh>(null);
-
-    const zRef = useRef(0);
-    const opacityRef = useRef(visible ? 1 : 0);
-    
-    useFrame((_, delta) => {
-        if (!group.current) return;
-
-        // All pages rotate around the spine (x=0)
-        const targetRotation = opened ? -Math.PI : 0;
-        
-        const rotDiff = targetRotation - group.current.rotation.y;
-        
-        // Smoother easing
-        const easing = 1 - Math.pow(1 - 0.06, delta * 60);
-        group.current.rotation.y += rotDiff * easing;
-
-        const progress = Math.max(0, Math.min(1, -group.current.rotation.y / Math.PI));
-        
-        // Z position - ensure proper stacking
-        const spacing = 0.008;
-        const frontZ = 0.5;
-        
-        let targetZ: number;
-        
-        // The page that just flipped (showing its back as left side) and 
-        // the next page (showing its front as right side) should be at front
-        const isCurrentLeftPage = opened && number === currentSpread - 1;
-        const isCurrentRightPage = !opened && number === currentSpread;
-        
-        if (isCurrentLeftPage || isCurrentRightPage) {
-            // Current visible pages at front
-            targetZ = frontZ;
-        } else if (number < currentSpread - 1) {
-            // Already flipped pages - stack behind, further back for older pages
-            targetZ = frontZ - 0.05 - (currentSpread - 1 - number) * spacing;
-        } else if (number >= currentSpread) {
-            // Not yet flipped pages - stack behind
-            targetZ = frontZ - (number - currentSpread + 1) * spacing;
-        } else {
-            targetZ = frontZ - 0.02;
-        }
-        
-        // Smoothly animate Z position
-        zRef.current += (targetZ - zRef.current) * easing;
-
-        // Elegant lift curve
-        const liftHeight = 1.8;
-        const liftCurve = Math.sin(progress * Math.PI);
-        const lift = liftCurve * liftHeight;
-        
-        // Slight forward tilt during flip
-        const tiltAmount = liftCurve * 0.08;
-        group.current.rotation.x = tiltAmount;
-
-        group.current.position.z = zRef.current + lift;
-    });
-
-    const isCover = number === 0;
+    const positionRef = useRef(0);
 
     // Create rounded corner mask
     const roundedMask = useMemo(() => {
@@ -113,96 +45,50 @@ function Page({ number, opened, totalPages, frontTexture, backTexture, isLeftPag
         ctx.closePath();
         ctx.fill();
 
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.needsUpdate = true;
-        return texture;
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        return tex;
     }, []);
 
-    // Define materials array
-    const materialArray = useMemo(() => {
-        // Edge material - pure white for paper edges
-        const sideMat = new THREE.MeshBasicMaterial({ 
-            color: isCover ? '#FFFFFF' : '#FFFFFF'
+    useFrame((_, delta) => {
+        if (!meshRef.current) return;
+
+        // Position based on continuous offset
+        const targetX = index * PAGE_WIDTH - offset;
+
+        const easing = 1 - Math.pow(1 - 0.12, delta * 60);
+        positionRef.current += (targetX - positionRef.current) * easing;
+
+        meshRef.current.position.x = positionRef.current;
+    });
+
+    const material = useMemo(() => {
+        return new THREE.MeshBasicMaterial({
+            map: texture,
+            alphaMap: roundedMask,
+            transparent: true,
+            side: THREE.DoubleSide,
         });
-
-        // Paper color - pure white
-        const paperColor = '#FFFFFF';
-        
-        // Cover has richer, darker appearance
-        const coverColor = '#FFFFFF';
-
-        // FRONT face - use BasicMaterial to show original image colors
-        let frontMat;
-        if (frontTexture) {
-            frontMat = new THREE.MeshBasicMaterial({
-                map: frontTexture,
-                alphaMap: roundedMask,
-                transparent: true
-            });
-        } else {
-            frontMat = new THREE.MeshBasicMaterial({
-                color: isCover ? coverColor : paperColor,
-                alphaMap: roundedMask,
-                transparent: true
-            });
-        }
-
-        // BACK face
-        let backMat;
-        if (backTexture) {
-            backMat = new THREE.MeshBasicMaterial({
-                map: backTexture,
-                alphaMap: roundedMask,
-                transparent: true
-            });
-        } else {
-            backMat = new THREE.MeshBasicMaterial({ 
-                color: isCover ? coverColor : paperColor,
-                alphaMap: roundedMask,
-                transparent: true
-            });
-        }
-
-        return [sideMat, sideMat, sideMat, sideMat, frontMat, backMat];
-    }, [isCover, frontTexture, backTexture, roundedMask]);
+    }, [texture, roundedMask]);
 
     return (
-        <group ref={group}>
-            {/* Page pivot point and position */}
-            <group position={[PAGE_WIDTH / 2, 0, 0]}>
-                <mesh ref={meshRef} material={materialArray} castShadow receiveShadow>
-                    <boxGeometry args={[PAGE_WIDTH, PAGE_HEIGHT, isCover ? COVER_DEPTH : PAGE_DEPTH]} />
-                </mesh>
-            </group>
-        </group>
+        <mesh ref={meshRef} material={material}>
+            <planeGeometry args={[PAGE_WIDTH, PAGE_HEIGHT]} />
+        </mesh>
     );
 }
 
-const Book = ({ pageIndex, setTotalPages, setCurrentPage }: { pageIndex: number, setTotalPages: (n: number) => void, setCurrentPage: (n: number) => void }) => {
-    const [hovered, setHover] = useState(false);
-    const groupRef = useRef<THREE.Group>(null);
-    const positionRef = useRef(-PAGE_WIDTH / 2);
-    useCursor(hovered);
-    
-    // Animate book position: centered when closed, shifted left when open
-    useFrame((_, delta) => {
-        if (!groupRef.current) return;
-        
-        // When pageIndex is 0 (cover), book is centered (shift left by half page width)
-        // When pageIndex > 0 (opened), book stays at origin so spine is at center
-        const targetX = pageIndex === 0 ? -PAGE_WIDTH / 2 : 0;
-        
-        const easing = 1 - Math.pow(1 - 0.06, delta * 60);
-        positionRef.current += (targetX - positionRef.current) * easing;
-        
-        groupRef.current.position.x = positionRef.current;
-    });
+interface SlideShowProps {
+    offset: number;
+    setTotalPages: (n: number) => void;
+}
 
+const SlideShow = ({ offset, setTotalPages }: SlideShowProps) => {
     // Load cover
     const coverTexture = useTexture('/book_cover.png');
     coverTexture.colorSpace = THREE.SRGBColorSpace;
 
-    // Load all spread textures (01-10)
+    // Load all spread textures
     const spreadTextures = useTexture([
         '/book_spread_01.png',
         '/book_spread_02.png',
@@ -216,7 +102,6 @@ const Book = ({ pageIndex, setTotalPages, setCurrentPage }: { pageIndex: number,
         '/book_spread_10.png',
     ]);
     
-    // Set color space for all spreads
     spreadTextures.forEach(tex => {
         tex.colorSpace = THREE.SRGBColorSpace;
     });
@@ -225,102 +110,144 @@ const Book = ({ pageIndex, setTotalPages, setCurrentPage }: { pageIndex: number,
     const lastTexture = useTexture('/book_last.png');
     lastTexture.colorSpace = THREE.SRGBColorSpace;
 
-    // Split each spread into left and right halves (including last page)
-    const spreads = useMemo(() => {
-        const allSpreads = [...spreadTextures, lastTexture].map(spreadTexture => {
-            const left = spreadTexture.clone();
-            left.colorSpace = THREE.SRGBColorSpace;
-            left.offset.set(0, 0);
-            left.repeat.set(0.5, 1);
-            left.needsUpdate = true;
+    // All textures in order
+    const allTextures = useMemo(() => {
+        return [coverTexture, ...spreadTextures, lastTexture];
+    }, [coverTexture, spreadTextures, lastTexture]);
 
-            const right = spreadTexture.clone();
-            right.colorSpace = THREE.SRGBColorSpace;
-            right.offset.set(0.5, 0);
-            right.repeat.set(0.5, 1);
-            right.needsUpdate = true;
-
-            return { left, right };
-        });
-        return allSpreads;
-    }, [spreadTextures, lastTexture]);
-
-    // Total pages: cover + 11 spread right pages = 12 pages
-    const totalPages = 12;
-    
     useEffect(() => {
-        setTotalPages(11); // 12 navigation points: 0=cover, 1-11=spreads
-        setCurrentPage(pageIndex);
-    }, [pageIndex, setTotalPages, setCurrentPage]);
-
-    // Build all pages
-    const allPages = [];
-    
-    // Cover page (page 0)
-    allPages.push(
-        <Page
-            key={0}
-            number={0}
-            totalPages={totalPages}
-            opened={pageIndex >= 1}
-            frontTexture={coverTexture}
-            backTexture={spreads[0].left}
-            isLeftPage={false}
-            currentSpread={pageIndex}
-            visible={true}
-        />
-    );
-    
-    // Spread pages
-    spreads.forEach((spread, spreadIndex) => {
-        const pageNumber = spreadIndex + 1;
-        const spreadNumber = spreadIndex + 1;
-        const nextSpread = spreads[spreadIndex + 1];
-        
-        allPages.push(
-            <Page
-                key={pageNumber}
-                number={pageNumber}
-                totalPages={totalPages}
-                opened={pageIndex > spreadNumber}
-                frontTexture={spread.right}
-                backTexture={nextSpread ? nextSpread.left : null}
-                isLeftPage={false}
-                currentSpread={pageIndex}
-                visible={true}
-            />
-        );
-    });
+        setTotalPages(allTextures.length - 1);
+    }, [allTextures.length, setTotalPages]);
 
     return (
-        <group
-            ref={groupRef}
-            onPointerOver={(e) => { e.stopPropagation(); setHover(true); }}
-            onPointerOut={(e) => { e.stopPropagation(); setHover(false); }}
-        >
-            {allPages}
+        <group>
+            {allTextures.map((texture, index) => (
+                <Slide
+                    key={index}
+                    texture={texture}
+                    index={index}
+                    offset={offset}
+                />
+            ))}
         </group>
     );
 };
 
 export default function BookDemo({ onBack }: { onBack: () => void }) {
     const [totalPages, setTotalPages] = useState(0);
-    const [currentPage, setCurrentPage] = useState(0);
+    const [offset, setOffset] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef({ x: 0, offset: 0 });
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    const handleNext = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(prev => prev + 1);
-        }
+    const currentPage = Math.round(offset / PAGE_WIDTH);
+
+    // Clamp offset to valid range
+    const clampOffset = (value: number) => {
+        const maxOffset = totalPages * PAGE_WIDTH;
+        return Math.max(0, Math.min(maxOffset, value));
     };
 
-    const handlePrev = () => {
-        if (currentPage > 0) {
-            setCurrentPage(prev => prev - 1);
-        }
+    // Snap to nearest page
+    const snapToPage = () => {
+        const nearestPage = Math.round(offset / PAGE_WIDTH);
+        setOffset(clampOffset(nearestPage * PAGE_WIDTH));
     };
+
+    // Mouse/Touch handlers
+    const handleDragStart = (clientX: number) => {
+        setIsDragging(true);
+        dragStartRef.current = { x: clientX, offset };
+    };
+
+    const handleDragMove = (clientX: number) => {
+        if (!isDragging) return;
+        const deltaX = dragStartRef.current.x - clientX;
+        const sensitivity = 0.015; // Adjust drag sensitivity
+        const newOffset = dragStartRef.current.offset + deltaX * sensitivity;
+        setOffset(clampOffset(newOffset));
+    };
+
+    const handleDragEnd = () => {
+        setIsDragging(false);
+        snapToPage();
+    };
+
+    // Mouse events
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        handleDragStart(e.clientX);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        handleDragMove(e.clientX);
+    };
+
+    const handleMouseUp = () => {
+        handleDragEnd();
+    };
+
+    const handleMouseLeave = () => {
+        if (isDragging) handleDragEnd();
+    };
+
+    // Touch events
+    const handleTouchStart = (e: React.TouchEvent) => {
+        handleDragStart(e.touches[0].clientX);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        handleDragMove(e.touches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+        handleDragEnd();
+    };
+
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                setOffset(prev => clampOffset(prev + PAGE_WIDTH));
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                setOffset(prev => clampOffset(prev - PAGE_WIDTH));
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [totalPages]);
+
+    // Wheel scroll
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const sensitivity = 0.01;
+            setOffset(prev => clampOffset(prev + e.deltaX * sensitivity + e.deltaY * sensitivity));
+        };
+
+        container.addEventListener('wheel', handleWheel, { passive: false });
+        return () => container.removeEventListener('wheel', handleWheel);
+    }, [totalPages]);
 
     return (
-        <div className="w-full h-screen relative overflow-hidden font-sans" style={{ background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #e8f4fc 100%)' }}>
+        <div 
+            ref={containerRef}
+            className="w-full h-screen relative overflow-hidden font-sans select-none"
+            style={{ 
+                background: 'linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #e8f4fc 100%)',
+                cursor: isDragging ? 'grabbing' : 'grab'
+            }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
             {/* Decorative background elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-[30%] -left-[15%] w-[60%] h-[60%] bg-sky-200/40 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
@@ -330,6 +257,7 @@ export default function BookDemo({ onBack }: { onBack: () => void }) {
 
             <button
                 onClick={onBack}
+                onMouseDown={e => e.stopPropagation()}
                 className="absolute top-8 left-8 z-50 text-sky-700 hover:text-sky-900 transition-all duration-300 flex items-center gap-2 font-medium bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm hover:shadow-md hover:bg-white/80"
             >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -339,11 +267,14 @@ export default function BookDemo({ onBack }: { onBack: () => void }) {
             </button>
 
             {/* Page indicator */}
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 bg-white/80 backdrop-blur-lg px-6 py-3 rounded-full shadow-lg border border-white/50 transition-all duration-300">
+            <div 
+                className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 bg-white/80 backdrop-blur-lg px-6 py-3 rounded-full shadow-lg border border-white/50 transition-all duration-300"
+                onMouseDown={e => e.stopPropagation()}
+            >
                 {new Array(totalPages + 1).fill(0).map((_, i) => (
                     <button
                         key={i}
-                        onClick={() => setCurrentPage(i)}
+                        onClick={() => setOffset(i * PAGE_WIDTH)}
                         className={`
                             rounded-full transition-all duration-300 
                             ${i === currentPage
@@ -354,78 +285,20 @@ export default function BookDemo({ onBack }: { onBack: () => void }) {
                     />
                 ))}
             </div>
-            
-            {/* Navigation areas */}
-            <div 
-                className="absolute left-0 top-0 w-1/2 h-full z-40 cursor-pointer group"
-                onClick={handlePrev}
-            >
-                <div className="absolute left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-1">
-                    <div className="bg-white/90 backdrop-blur-md rounded-full p-3 shadow-xl border border-sky-100">
-                        <svg className="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            <div 
-                className="absolute right-0 top-0 w-1/2 h-full z-40 cursor-pointer group"
-                onClick={handleNext}
-            >
-                <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-x-1">
-                    <div className="bg-white/90 backdrop-blur-md rounded-full p-3 shadow-xl border border-sky-100">
-                        <svg className="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
 
-            <Canvas shadows camera={{ position: [0, 0, 8], fov: 35 }} gl={{ toneMapping: THREE.NoToneMapping }}>
-                {/* Minimal lighting - MeshBasicMaterial doesn't need much light */}
-                {/* But we keep some for shadows on other elements */}
+            <Canvas camera={{ position: [0, 0, 8], fov: 35 }} gl={{ toneMapping: THREE.NoToneMapping }}>
                 <ambientLight intensity={1.0} color="#ffffff" />
-                
-                {/* Key light - pure white for accurate colors */}
-                <directionalLight 
-                    position={[4, 5, 5]} 
-                    intensity={0.5} 
-                    castShadow
-                    shadow-mapSize-width={2048}
-                    shadow-mapSize-height={2048}
-                    shadow-camera-far={20}
-                    shadow-camera-left={-5}
-                    shadow-camera-right={5}
-                    shadow-camera-top={5}
-                    shadow-camera-bottom={-5}
-                    shadow-bias={-0.0001}
-                    color="#ffffff"
-                />
 
-                <PresentationControls
-                    global
-                    rotation={[0, 0, 0]}
-                    polar={[-Math.PI / 10, Math.PI / 10]}
-                    azimuth={[-Math.PI / 6, Math.PI / 6]}
+                <Float
+                    rotationIntensity={0.05}
+                    floatIntensity={0.1}
+                    speed={1.5}
+                    floatingRange={[-0.015, 0.015]}
                 >
-                    <Float
-                        rotationIntensity={0.05}
-                        floatIntensity={0.1}
-                        speed={1.5}
-                        floatingRange={[-0.015, 0.015]}
-                    >
-                        <group position={[0, 0.1, 0]}>
-                            <React.Suspense fallback={null}>
-                                <Book pageIndex={currentPage} setTotalPages={setTotalPages} setCurrentPage={setCurrentPage} />
-                            </React.Suspense>
-                        </group>
-                    </Float>
-                </PresentationControls>
-
-                {/* Removed Environment to preserve original image colors */}
-                
-                {/* Soft fog for atmospheric depth */}
-                <fog attach="fog" args={['#ffffff', 15, 30]} />
+                    <React.Suspense fallback={null}>
+                        <SlideShow offset={offset} setTotalPages={setTotalPages} />
+                    </React.Suspense>
+                </Float>
             </Canvas>
         </div>
     );
