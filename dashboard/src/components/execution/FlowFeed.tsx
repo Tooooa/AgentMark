@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import StepCard from './StepCard';
-import type { Step } from '../../data/mockData';
+import type { Step } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 import { User, Bot, Play, Pause, Sparkles, X } from 'lucide-react';
 import { scenarios } from '../../data/mockData';
@@ -77,23 +77,6 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
     const scrollContainerClass = isAddAgent
         ? 'flex-1 overflow-y-auto px-5 py-4 space-y-6 scrollbar-hide'
         : 'flex-1 overflow-y-auto px-4 py-6 space-y-8 scrollbar-hide';
-    const userBubbleClass = isAddAgent
-        ? 'bg-gradient-to-br from-indigo-500 to-indigo-600'
-        : 'bg-gradient-to-br from-indigo-500 to-indigo-600';
-    const userBubbleLabelClass = isAddAgent ? 'text-indigo-100' : 'text-indigo-100';
-    const userAvatarClass = isAddAgent
-        ? 'bg-indigo-100 text-indigo-600'
-        : 'bg-indigo-100 text-indigo-600';
-    const continueCardClass = isAddAgent
-        ? 'bg-white rounded-2xl p-4 shadow-xl border border-indigo-100 ring-1 ring-indigo-50/50 backdrop-blur-sm'
-        : 'bg-white rounded-2xl p-4 shadow-xl border border-indigo-100 ring-1 ring-indigo-50/50 backdrop-blur-sm';
-    const continueTitleClass = isAddAgent ? 'text-indigo-500' : 'text-indigo-500';
-    const continueInputClass = isAddAgent
-        ? 'bg-slate-50 border border-slate-200 focus:border-indigo-500'
-        : 'bg-slate-50 border border-slate-200 focus:border-indigo-500';
-    const continueButtonClass = isAddAgent
-        ? 'bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white shadow-[0_10px_24px_rgba(59,130,246,0.35)] hover:from-sky-400 hover:via-blue-500 hover:to-indigo-500 hover:shadow-[0_16px_30px_rgba(59,130,246,0.45)]'
-        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg';
 
 
     return (
@@ -185,20 +168,7 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                     );
                 })}
 
-                {isPlaying && (
-                    <div className={`flex flex-col gap-3 p-4 rounded-2xl animate-pulse ${isAddAgent
-                        ? "bg-white/80 border border-amber-100/50 shadow-sm"
-                        : "bg-white border border-slate-200 shadow-sm"
-                        }`}>
-                        <div className="flex items-center gap-2 opacity-70">
-                            <div className={`w-4 h-4 rounded-full ${isAddAgent ? 'bg-indigo-200' : 'bg-indigo-200'}`} />
-                            <span className={`text-xs font-bold ${isAddAgent ? 'text-indigo-500' : 'text-indigo-400'}`}>
-                                {locale === 'zh' ? '思考中...' : 'Thinking...'}
-                            </span>
-                        </div>
-                        <div className={`h-12 w-full rounded-lg ${isAddAgent ? 'bg-indigo-50/50' : 'bg-slate-50'}`} />
-                    </div>
-                )}
+
 
                 <div ref={bottomRef} className="h-4" />
             </div>
@@ -251,66 +221,75 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                                 <Bot size={14} /> {locale === 'zh' ? '继续任务' : 'Continue Task'}
                             </p>
                             <div className="relative z-10 flex gap-3 items-center">
-                                <input
-                                    ref={promptInputRef}
-                                    id="continue-input"
-                                    type="text"
-                                    value={continueInput}
-                                    onChange={(e) => setContinueInput(e.target.value)}
-                                    placeholder={locale === 'zh' ? "输入新指令继续..." : "Input new prompt to continue..."}
-                                    className={`flex-1 bg-white/80 rounded-2xl px-5 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all shadow-inner
-                                        ${isAddAgent ? 'border border-indigo-100/80 focus:border-indigo-400 focus:ring-indigo-200/70' : 'border border-indigo-100/80 focus:border-indigo-400 focus:ring-indigo-200/70'}
-                                        ${(isSending || isPlaying) ? 'opacity-70 bg-slate-100 cursor-not-allowed' : ''}`}
-                                    disabled={isSending || isPlaying}
-                                    onFocus={() => setShowPrompts(true)}
-                                    // Removed onBlur to allow clicking on the popup
-                                    onKeyDown={async (e) => {
-                                        if (e.key === 'Enter' && !isSending && !isPlaying) {
-                                            const val = continueInput.trim();
-                                            if (val && onContinue) {
-                                                setContinueInput(''); // 立即清空
-                                                setIsSending(true);
-                                                setShowPrompts(false);
-                                                try {
-                                                    await onContinue(val);
-                                                } finally {
-                                                    setIsSending(false);
+                                {onContinue && (
+                                    <>
+                                        <input
+                                            ref={promptInputRef}
+                                            id="continue-input"
+                                            type="text"
+                                            value={continueInput}
+                                            onChange={(e) => setContinueInput(e.target.value)}
+                                            placeholder={locale === 'zh' ? "输入新指令继续..." : "Input new prompt to continue..."}
+                                            className={`flex-1 bg-white/80 rounded-2xl px-5 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all shadow-inner
+                                                ${isAddAgent ? 'border border-indigo-100/80 focus:border-indigo-400 focus:ring-indigo-200/70' : 'border border-indigo-100/80 focus:border-indigo-400 focus:ring-indigo-200/70'}
+                                                ${(isSending || isPlaying) ? 'opacity-70 bg-slate-100 cursor-not-allowed' : ''}`}
+                                            disabled={isSending || isPlaying}
+                                            onFocus={() => setShowPrompts(true)}
+                                            // Removed onBlur to allow clicking on the popup
+                                            onKeyDown={async (e) => {
+                                                if (e.key === 'Enter' && !isSending && !isPlaying) {
+                                                    const val = continueInput.trim();
+                                                    if (val && onContinue) {
+                                                        setContinueInput(''); // 立即清空
+                                                        setIsSending(true);
+                                                        setShowPrompts(false);
+                                                        try {
+                                                            await onContinue(val);
+                                                        } finally {
+                                                            setIsSending(false);
+                                                        }
+                                                    }
                                                 }
-                                            }
-                                        }
-                                    }}
-                                />
-                                <button
-                                    className={`rounded-2xl px-6 py-2.5 text-sm font-semibold transition-all flex items-center gap-2
-                                        ${isSending || isPlaying
-                                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                            : isAddAgent
-                                                ? 'bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white shadow-[0_10px_24px_rgba(59,130,246,0.35)] hover:from-sky-400 hover:via-blue-500 hover:to-indigo-500 hover:shadow-[0_16px_30px_rgba(59,130,246,0.45)]'
-                                                : 'bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white shadow-[0_10px_24px_rgba(59,130,246,0.35)] hover:from-sky-400 hover:via-blue-500 hover:to-indigo-500 hover:shadow-[0_16px_30px_rgba(59,130,246,0.45)]'}`}
-                                    disabled={isSending || isPlaying}
-                                    onClick={async () => {
-                                        const val = continueInput.trim();
-                                        if (val && onContinue) {
-                                            setContinueInput(''); // 立即清空
-                                            setIsSending(true);
-                                            setShowPrompts(false);
-                                            try {
-                                                await onContinue(val);
-                                            } finally {
-                                                setIsSending(false);
-                                            }
-                                        }
-                                    }}
-                                >
-                                    {isSending ? (
-                                        <>
-                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            {locale === 'zh' ? '发送中...' : 'Sending...'}
-                                        </>
-                                    ) : (
-                                        locale === 'zh' ? '发送' : 'Send'
-                                    )}
-                                </button>
+                                            }}
+                                        />
+                                        <button
+                                            className={`rounded-2xl px-6 py-2.5 text-sm font-semibold transition-all flex items-center gap-2
+                                                ${isSending || isPlaying
+                                                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                                    : isAddAgent
+                                                        ? 'bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white shadow-[0_10px_24px_rgba(59,130,246,0.35)] hover:from-sky-400 hover:via-blue-500 hover:to-indigo-500 hover:shadow-[0_16px_30px_rgba(59,130,246,0.45)]'
+                                                        : 'bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white shadow-[0_10px_24px_rgba(59,130,246,0.35)] hover:from-sky-400 hover:via-blue-500 hover:to-indigo-500 hover:shadow-[0_16px_30px_rgba(59,130,246,0.45)]'}`}
+                                            disabled={isSending || isPlaying}
+                                            onClick={async () => {
+                                                const val = continueInput.trim();
+                                                if (val && onContinue) {
+                                                    setContinueInput(''); // 立即清空
+                                                    setIsSending(true);
+                                                    setShowPrompts(false);
+                                                    try {
+                                                        await onContinue(val);
+                                                    } finally {
+                                                        setIsSending(false);
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            {isSending ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    {locale === 'zh' ? '发送中...' : 'Sending...'}
+                                                </>
+                                            ) : (
+                                                locale === 'zh' ? '发送' : 'Send'
+                                            )}
+                                        </button>
+                                    </>
+                                )}
+                                {!onContinue && hasSteps && (
+                                    <div className="flex-1 text-sm text-slate-400 italic px-2">
+                                        {locale === 'zh' ? '（当前为模拟模式，仅供查看）' : '(Simulation Mode - View Only)'}
+                                    </div>
+                                )}
                                 {onTogglePlay && (
                                     <button
                                         className="rounded-xl px-3 py-2 text-sm font-bold transition-all flex items-center justify-center gap-2

@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useMemo } from 'react';
 import { useI18n } from '../../i18n/I18nContext';
 
 import StepCard from '../execution/StepCard';
-import type { Step } from '../../data/mockData';
+import type { Step } from '../../types';
 
 import { User } from 'lucide-react';
 
@@ -10,11 +10,10 @@ interface ComparisonViewProps {
     visibleSteps: Step[];
     erasedIndices: Set<number>;
     scenarioId?: string;
-    evaluationResult?: { model_a_score: number, model_b_score: number, reason: string } | null;
     userQuery?: string;
     promptInstruction?: string;
     evaluationRef?: React.RefObject<HTMLDivElement>;
-    utilityMonitorRef?: React.RefObject<HTMLDivElement>;
+
     chartRef?: React.RefObject<HTMLDivElement>;
     variant?: 'default' | 'add_agent';
 }
@@ -30,11 +29,9 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
     visibleSteps,
     erasedIndices,
     scenarioId,
-    evaluationResult,
     userQuery,
     promptInstruction,
     evaluationRef,
-    utilityMonitorRef,
     chartRef,
     variant = 'default'
 }) => {
@@ -190,14 +187,12 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                         <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
                             <span className="font-bold text-slate-600 text-sm">{locale === 'zh' ? '无水印Agent' : 'Original (Base)'}</span>
                         </div>
-                        <div className={`p-3 rounded-xl shadow-sm ${
-                            isAddAgent 
-                                ? 'bg-amber-50 border border-amber-200' 
-                                : 'bg-indigo-50 border border-indigo-200'
-                        }`}>
-                            <span className={`font-bold text-sm ${
-                                isAddAgent ? 'text-amber-700' : 'text-indigo-700'
-                            }`}>{locale === 'zh' ? '有水印Agent' : 'Ours (Watermarked)'}</span>
+                        <div className={`p-3 rounded-xl shadow-sm ${isAddAgent
+                            ? 'bg-amber-50 border border-amber-200'
+                            : 'bg-indigo-50 border border-indigo-200'
+                            }`}>
+                            <span className={`font-bold text-sm ${isAddAgent ? 'text-amber-700' : 'text-indigo-700'
+                                }`}>{locale === 'zh' ? '有水印Agent' : 'Ours (Watermarked)'}</span>
                         </div>
                     </div>
                 </div>
@@ -226,7 +221,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                                                     step={step}
                                                     isErased={false}
                                                     showWatermarkDetails={false}
-                                                    showDistribution={false}
+                                                    showDistribution={true}
                                                     displayIndex={prevBaselineCount + stepIdx + 1}
                                                     variant={variant}
                                                 />
@@ -239,9 +234,8 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
                                     </div>
 
                                     {/* Right: Watermarked steps */}
-                                    <div ref={segIndex === 0 ? chartRef : undefined} className={`space-y-4 p-2 bg-white rounded-xl border ${
-                                        isAddAgent ? 'border-amber-100' : 'border-indigo-100'
-                                    }`}>
+                                    <div ref={segIndex === 0 ? chartRef : undefined} className={`space-y-4 p-2 bg-white rounded-xl border ${isAddAgent ? 'border-amber-100' : 'border-indigo-100'
+                                        }`}>
                                         {segment.watermarkedSteps.length > 0 ? (
                                             segment.watermarkedSteps.map((step, stepIdx) => (
                                                 <StepCard

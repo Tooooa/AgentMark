@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileDigit, Database, Lock, CheckCircle2 } from 'lucide-react';
-import type { Step } from '../../data/mockData';
+import type { Step } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 
 interface RLNCDetailModalProps {
@@ -126,7 +126,9 @@ const RLNCDetailModal: React.FC<RLNCDetailModalProps> = ({ isOpen, onClose, step
 
                                         {step.watermark.matrixRows.length === 0 && (
                                             <div className="text-center p-8 text-slate-400 text-sm italic border-2 border-dashed border-slate-100 rounded-xl">
-                                                {locale === 'zh' ? '暂无矩阵数据' : 'No matrix data available'}
+                                                {locale === 'zh'
+                                                    ? '本次采样未嵌入比特。原因：差分采样（Differential Sampling）选中的概率分箱中仅包含唯一的候选行为，不存在可选空间，故无法携带水印信息。'
+                                                    : 'No bits embedded. Reason: The probability bin selected by Differential Sampling contains only unique candidate action, offering no optional space to carry watermark information.'}
                                             </div>
                                         )}
                                     </div>

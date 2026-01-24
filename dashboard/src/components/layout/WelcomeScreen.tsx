@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Box, Cpu, Plus, Search, Zap, BookOpen } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
-import AddAgentModal from '../modals/AddAgentModal';
-import { api } from '../../services/api';
+
+
 import { scenarios as presetScenarios } from '../../data/mockData';
-import type { Trajectory } from '../../data/mockData';
+import type { Trajectory } from '../../types';
 
 interface WelcomeScreenProps {
-    onStart: (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; mode?: 'dashboard' | 'add_agent' | 'book_demo'; agentRepoUrl?: string }) => void;
+    onStart: (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; mode?: 'dashboard' | 'book_demo'; agentRepoUrl?: string }) => void;
     initialScenarioId: string;
     initialErasureRate: number;
     isLiveMode: boolean;
@@ -29,35 +29,17 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 }) => {
     const { locale } = useI18n();
     const [selectedMode, setSelectedMode] = useState<Mode>(null);
-    const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
-    const [addAgentRepoUrl, setAddAgentRepoUrl] = useState('');
+    const [showToast, setShowToast] = useState(false);
+
 
     // Config State
-    const [selectedScenarioId, setSelectedScenarioId] = useState<string>('');
     const [promptText, setPromptText] = useState('');
     const [showScenarioList, setShowScenarioList] = useState(false);
-    const [historyScenarios, setHistoryScenarios] = useState<Trajectory[]>([]);
+
 
     const [payload, setPayload] = useState('1101');
-    const [erasureRate] = useState(initialErasureRate);
 
-    // Combine preset scenarios with history
-    const allScenarios = useMemo(() => {
-        return [...presetScenarios, ...historyScenarios];
-    }, [historyScenarios]);
 
-    // Load scenarios from database
-    useEffect(() => {
-        const loadScenarios = async () => {
-            try {
-                const saved = await api.listScenarios();
-                setHistoryScenarios(saved);
-            } catch (e) {
-                console.error("Failed to load scenarios", e);
-            }
-        };
-        loadScenarios();
-    }, []);
 
     const [activeIndex, setActiveIndex] = useState(1);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -90,7 +72,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     }, [activeIndex, selectedMode]);
 
     const handleSelectScenario = (s: Trajectory) => {
-        setSelectedScenarioId(s.id);
+        // setSelectedScenarioId(s.id); 
         const title = locale === 'zh' ? s.title.zh : s.title.en;
         const query = (locale === 'zh' && s.userQueryZh) ? s.userQueryZh : s.userQuery;
         setPromptText(query || title);
@@ -102,24 +84,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             onStart({
                 scenarioId: '',
                 payload: payload,
-                erasureRate: erasureRate,
+                erasureRate: initialErasureRate,
                 query: ''
             });
         }
     };
 
-    const handleAddAgentApply = (data: { repoUrl: string; apiKey: string }) => {
-        setApiKey(data.apiKey);
-        setAddAgentRepoUrl(data.repoUrl);
-        setIsAddAgentModalOpen(false);
-        onStart({
-            scenarioId: '',
-            payload,
-            erasureRate,
-            mode: 'add_agent',
-            agentRepoUrl: data.repoUrl
-        });
-    };
+
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8 font-sans relative overflow-hidden">
@@ -134,7 +105,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 onClick={() => onStart({
                     scenarioId: '',
                     payload: payload,
-                    erasureRate: erasureRate,
+                    erasureRate: initialErasureRate,
                     mode: 'book_demo'
                 })}
                 className="absolute top-8 left-8 z-50 flex items-center gap-3 px-5 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 hover:bg-white text-indigo-600 transition-all duration-300 group border border-white/50"
@@ -239,13 +210,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                 onStart({
                                                     scenarioId: '',
                                                     payload: payload,
-                                                    erasureRate: erasureRate,
+                                                    erasureRate: initialErasureRate,
                                                     query: ''
                                                 });
-                                            } else if (mode.id === 'add') {
+                                            } else if (mode.id === 'self' || mode.id === 'add') {
+                                                // 显示开发中提示
+                                                setShowToast(true);
+                                                setTimeout(() => setShowToast(false), 2000);
                                                 setActiveIndex(index);
-                                                setSelectedMode(mode.id as Mode);
-                                                setIsAddAgentModalOpen(true);
                                             } else {
                                                 setActiveIndex(index);
                                                 setSelectedMode(mode.id as Mode);
@@ -403,13 +375,26 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                     </div>
                 </div>
             </div>
-            <AddAgentModal
-                isOpen={isAddAgentModalOpen}
-                onClose={() => setIsAddAgentModalOpen(false)}
-                onApply={handleAddAgentApply}
-                apiKey={apiKey}
-                repoUrl={addAgentRepoUrl}
-            />
+
+            {/* Toast Notification */}
+            <AnimatePresence>
+                {showToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-slate-800/90 text-white px-6 py-3 rounded-xl shadow-lg backdrop-blur-md border border-slate-700/50"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                            <span className="font-medium text-sm">
+                                {locale === 'zh' ? '该功能正在开发中' : 'This feature is under development'}
+                            </span>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
         </div>
     );
 };

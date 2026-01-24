@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, CartesianGrid } from 'recharts';
 import { X, RotateCcw, ArrowRight, Play } from 'lucide-react';
-import type { Step } from '../../data/mockData';
+import type { Step } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 import { roundNormalizedProbsToSumOne } from '../../utils/probability';
 
@@ -30,7 +30,7 @@ interface StepDetailModalProps {
 
 const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step, mode = 'watermarked', displayIndex }) => {
     const { t } = useI18n();
-    
+
     // 使用 displayIndex 如果提供了，否则使用 step.stepIndex
     const stepNumber = displayIndex !== undefined ? displayIndex : step.stepIndex;
 
@@ -223,48 +223,48 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                     </div>
 
                     {/* Content */}
-                      <div className="flex-1 overflow-y-scroll p-6 bg-slate-50/50" ref={containerRef}>
-                          <div className="flex gap-4 h-[500px]">
-                              {/* Left Chart: Decomposition or Single Distribution */}
+                    <div className="flex-1 overflow-y-scroll p-6 bg-slate-50/50" ref={containerRef}>
+                        <div className="flex gap-4 h-[500px]">
+                            {/* Left Chart: Decomposition or Single Distribution */}
                             <div className={`bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col ${mode === 'baseline' ? 'max-w-4xl mx-auto w-full' : 'flex-1 max-w-2xl'}`} ref={leftChartRef}>
                                 <div className="h-12 flex items-center justify-center mb-1">
                                     <h3 className="text-base font-bold text-slate-600 uppercase tracking-wider text-center">
                                         {mode === 'watermarked' ? t('probDecomp') : t('probDist')}
                                     </h3>
                                 </div>
-                                    <div className="flex-1 relative">
-                                        {!chartsReady ? (
-                                            <div className="w-full h-full bg-slate-50 rounded-lg animate-pulse" />
-                                        ) : (
+                                <div className="flex-1 relative">
+                                    {!chartsReady ? (
+                                        <div className="w-full h-full bg-slate-50 rounded-lg animate-pulse" />
+                                    ) : (
                                         <ResponsiveContainer width="100%" height="100%" debounce={100}>
                                             <BarChart data={decompositionData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                                 <XAxis
                                                     dataKey="name"
                                                     tick={{ fontSize: 10 }}
-                                                  interval={decompositionData.length > 10 ? Math.ceil(decompositionData.length / 10) - 1 : 0}
-                                                  angle={-45}
-                                                  textAnchor="end"
-                                                  height={60}
-                                              />
-                                              <YAxis tickFormatter={(v) => Number(v).toFixed(3)} />
-                                              <Tooltip content={({ active, payload, label }) => {
-                                                  if (active && payload && payload.length) {
-                                                      const item: any = payload[0].payload;
-                                                      const prob = Number(item.prob);
-                                                      return (
-                                                          <div className="bg-white/95 backdrop-blur shadow-xl border border-slate-200 p-3 rounded-lg text-xs">
-                                                              <p className="font-bold mb-1 text-slate-800">{label}</p>
-                                                              <p className="font-mono">Prob: {prob.toFixed(3)}</p>
-                                                          </div>
-                                                      );
-                                                  }
-                                                  return null;
-                                              }} />
-                                              {/* Slicing Lines (Only for Watermarked/Diff) */}
-                                              {mode === 'watermarked' && decompositionData.slice(0, MAX_REFERENCE_LINES).map((d, i) => (
-                                                  <ReferenceLine key={`line-${i}`} y={d.prob} stroke="#94a3b8" strokeDasharray="4 4" label={{ position: 'right', value: `P${i + 1}`, fontSize: 10, fill: '#94a3b8' }} />
-                                              ))}
+                                                    interval={decompositionData.length > 10 ? Math.ceil(decompositionData.length / 10) - 1 : 0}
+                                                    angle={-45}
+                                                    textAnchor="end"
+                                                    height={60}
+                                                />
+                                                <YAxis tickFormatter={(v) => Number(v).toFixed(3)} />
+                                                <Tooltip content={({ active, payload, label }) => {
+                                                    if (active && payload && payload.length) {
+                                                        const item: any = payload[0].payload;
+                                                        const prob = Number(item.prob);
+                                                        return (
+                                                            <div className="bg-white/95 backdrop-blur shadow-xl border border-slate-200 p-3 rounded-lg text-xs">
+                                                                <p className="font-bold mb-1 text-slate-800">{label}</p>
+                                                                <p className="font-mono">Prob: {prob.toFixed(3)}</p>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                }} />
+                                                {/* Slicing Lines (Only for Watermarked/Diff) */}
+                                                {mode === 'watermarked' && decompositionData.slice(0, MAX_REFERENCE_LINES).map((d, i) => (
+                                                    <ReferenceLine key={`line-${i}`} y={d.prob} stroke="#94a3b8" strokeDasharray="4 4" label={{ position: 'right', value: `P${i + 1}`, fontSize: 10, fill: '#94a3b8' }} />
+                                                ))}
                                                 <Bar dataKey="prob" radius={[4, 4, 0, 0]} isAnimationActive={false} maxBarSize={mode === 'baseline' ? 100 : 80}>
                                                     {decompositionData.map((_, i) => (
                                                         <Cell key={i} fill={getRankColor(i)} />
@@ -272,9 +272,9 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                                 </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
+                            </div>
 
                             {/* Right Section (Only for Watermarked) */}
                             {mode === 'watermarked' && (
@@ -284,13 +284,13 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                         <ArrowRight size={48} />
                                     </div>
 
-                                      {/* Right Chart: Recombination */}
+                                    {/* Right Chart: Recombination */}
                                     <div className="flex-1 max-w-2xl bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col" ref={rightChartRef}>
                                         <div className="h-12 flex items-center justify-center mb-1">
                                             <h3 className="text-base font-bold text-slate-600 uppercase tracking-wider text-center">
                                                 {t('recombination')}
                                             </h3>
-                                              {!isAnimating && visibleLayers >= sortedDist.length && (
+                                            {!isAnimating && visibleLayers >= sortedDist.length && (
                                                 <button
                                                     onClick={handleReplay}
                                                     className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
@@ -304,51 +304,51 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step
                                             {!chartsReady ? (
                                                 <div className="w-full h-full bg-slate-50 rounded-lg animate-pulse" />
                                             ) : (
-                                            <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                                                <BarChart data={binsData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                                    <XAxis dataKey="name" tick={{ fontSize: 10 }} height={60} />
-                                                      <YAxis />
-                                                      <Tooltip cursor={{ fill: 'transparent' }} content={({ active, payload, label }) => {
-                                                        if (active && payload && payload.length) {
-                                                            const bin = payload[0].payload;
-                                                            return (
-                                                                <div className="bg-white/95 backdrop-blur shadow-xl border border-slate-200 p-3 rounded-lg text-xs">
-                                                                    <p className="font-bold mb-2 text-base text-slate-800">{label}</p>
-                                                                    <div className="space-y-1">
-                                                                        <p className="flex justify-between gap-4"><span>Total Weight:</span> <span className="font-mono font-bold">{bin.totalWeight.toFixed(4)}</span></p>
-                                                                        <p className="flex justify-between gap-4"><span>Bin Size (K):</span> <span className="font-mono">{bin.k}</span></p>
-                                                                        <div className="border-t border-slate-100 my-1 pt-1">
-                                                                            <p className="font-semibold text-slate-500 mb-1">Contains parts from:</p>
-                                                                            {sortedDist.slice(0, bin.k).map((d, idx) => (
-                                                                                <div key={idx} className="flex items-center gap-2">
-                                                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getRankColor(idx) }}></div>
-                                                                                    <span className="truncate max-w-[150px]">{d.name}</span>
-                                                                                </div>
-                                                                            ))}
+                                                <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                                                    <BarChart data={binsData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 10 }} height={60} />
+                                                        <YAxis />
+                                                        <Tooltip cursor={{ fill: 'transparent' }} content={({ active, payload, label }) => {
+                                                            if (active && payload && payload.length) {
+                                                                const bin = payload[0].payload;
+                                                                return (
+                                                                    <div className="bg-white/95 backdrop-blur shadow-xl border border-slate-200 p-3 rounded-lg text-xs">
+                                                                        <p className="font-bold mb-2 text-base text-slate-800">{label}</p>
+                                                                        <div className="space-y-1">
+                                                                            <p className="flex justify-between gap-4"><span>Total Weight:</span> <span className="font-mono font-bold">{bin.totalWeight.toFixed(4)}</span></p>
+                                                                            <p className="flex justify-between gap-4"><span>Bin Size (K):</span> <span className="font-mono">{bin.k}</span></p>
+                                                                            <div className="border-t border-slate-100 my-1 pt-1">
+                                                                                <p className="font-semibold text-slate-500 mb-1">Contains parts from:</p>
+                                                                                {sortedDist.slice(0, bin.k).map((d, idx) => (
+                                                                                    <div key={idx} className="flex items-center gap-2">
+                                                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getRankColor(idx) }}></div>
+                                                                                        <span className="truncate max-w-[150px]">{d.name}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    }} />
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }} />
 
-                                                    {/* Render Stacked Bars - Animated */}
-                                                    {/* We stack up to max K. Max K is sortedDist.length */}
-                                                    {sortedDist.slice(0, visibleLayers).map((_, i) => (
-                                                        <Bar
-                                                            key={`stack-${i}`}
-                                                            dataKey={`Action_${i + 1}`}
-                                                            stackId="a"
-                                                            fill={getRankColor(i)}
-                                                            stroke="white"
-                                                            strokeWidth={1}
-                                                            maxBarSize={80}
-                                                        />
-                                                    ))}
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                                        {/* Render Stacked Bars - Animated */}
+                                                        {/* We stack up to max K. Max K is sortedDist.length */}
+                                                        {sortedDist.slice(0, visibleLayers).map((_, i) => (
+                                                            <Bar
+                                                                key={`stack-${i}`}
+                                                                dataKey={`Action_${i + 1}`}
+                                                                stackId="a"
+                                                                fill={getRankColor(i)}
+                                                                stroke="white"
+                                                                strokeWidth={1}
+                                                                maxBarSize={80}
+                                                            />
+                                                        ))}
+                                                    </BarChart>
+                                                </ResponsiveContainer>
                                             )}
                                         </div>
                                     </div>

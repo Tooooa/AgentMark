@@ -1,7 +1,7 @@
 import React from 'react';
 import { Play, Pause, RotateCcw, SkipForward, SkipBack, Activity, Zap, Columns, PlusCircle, Save, Award } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import type { Trajectory } from '../../data/mockData';
+import type { Trajectory } from '../../types';
 import { useI18n } from '../../i18n/I18nContext';
 
 interface ControlPanelProps {

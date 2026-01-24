@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Step } from '../../data/mockData';
+import type { Step } from '../../types';
 import { CheckCircle2, Lock, Database, FileDigit } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
 import RLNCDetailModal from './RLNCDetailModal';
@@ -28,7 +28,6 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
     setErasureRate,
     channelNoiseRef,
     decoderProgressRef,
-    promptInputRef,
     variant = 'default'
 }) => {
     const isAddAgent = variant === 'add_agent';
@@ -327,7 +326,7 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                                                     {locale === 'zh' ? `日志 #${displayIndex + 1}` : `Log #${displayIndex + 1}`}
                                                 </span>
                                                 <span className="text-[10px] font-mono text-slate-400">
-                                                    {"14:02:23"}
+                                                    {step.timestamp || "14:02:23"}
                                                 </span>
                                             </div>
 

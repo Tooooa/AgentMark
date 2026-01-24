@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { scenarios } from '../data/mockData';
-import type { Trajectory, Step } from '../data/mockData';
+import type { Trajectory, Step } from '../types';
 import { api } from '../services/api';
 
 
@@ -206,7 +206,8 @@ export const useSimulation = () => {
                 taskName: "Live Execution",
                 userQuery: data.task.query,
                 totalSteps: 0,
-                steps: []
+                steps: [],
+                payload: payload
             });
             setCurrentStepIndex(0);
             setErasedIndices(new Set());
@@ -289,6 +290,7 @@ export const useSimulation = () => {
                     if (!prev) return null;
                     const placeholderStep: Step = {
                         stepIndex: initialStepIndex,
+                        timestamp: new Date().toLocaleTimeString('en-GB'), // 24h format
                         thought: isWmPreDone ? "" : "Thinking...",
                         action: "",
                         distribution: [],
@@ -688,7 +690,8 @@ export const useSimulation = () => {
                         taskName: "Live Execution",
                         userQuery: data.task.query,
                         totalSteps: 0,
-                        steps: []
+                        steps: [],
+                        payload: payload
                     };
 
                     // If there's an existing "New Chat" entry (not saved to DB yet), just replace it
@@ -758,6 +761,7 @@ export const useSimulation = () => {
                 if (!prev) return null; // Should not happen if restored above
                 const userStep: Step = {
                     stepIndex: prev.steps.length,
+                    timestamp: new Date().toLocaleTimeString('en-GB'),
                     thought: prompt,
                     action: "",
                     distribution: [],

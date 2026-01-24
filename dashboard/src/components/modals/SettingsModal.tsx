@@ -26,7 +26,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     apiKey,
     setApiKey,
     customQuery,
-    setCustomQuery,
     payload,
     setPayload,
     onInitSession,

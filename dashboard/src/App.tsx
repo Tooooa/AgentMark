@@ -6,7 +6,7 @@ import FlowFeed from './components/execution/FlowFeed';
 import DecoderPanel from './components/decoder/DecoderPanel';
 import ComparisonView from './components/layout/ComparisonView';
 import WelcomeScreen from './components/layout/WelcomeScreen';
-import AddAgentDashboard from './components/plugin/AddAgentDashboard';
+
 import SaveScenarioModal from './components/modals/SaveScenarioModal';
 import SettingsModal from './components/modals/SettingsModal';
 import ConfirmDialog from './components/modals/ConfirmDialog';
@@ -72,7 +72,7 @@ function AppContent() {
   } = useSimulation();
 
   const [hasStarted, setHasStarted] = useState(false);
-  const [viewMode, setViewMode] = useState<'dashboard' | 'add_agent' | 'book_demo'>('dashboard');
+  const [viewMode, setViewMode] = useState<'dashboard' | 'book_demo'>('dashboard');
   // const [isComparisonMode, setIsComparisonMode] = useState(false); // Removed
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -131,9 +131,9 @@ function AppContent() {
   // Actually, let's just use the hook's payload directly for DecoderPanel too, 
   // but DecoderPanel prop is 'targetPayload'.
 
-  const [addAgentRepoUrl, setAddAgentRepoUrl] = useState('');
 
-  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; mode?: 'dashboard' | 'add_agent' | 'book_demo'; agentRepoUrl?: string }) => {
+
+  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; mode?: 'dashboard' | 'book_demo'; agentRepoUrl?: string }) => {
     const nextMode = config.mode || 'dashboard';
     setViewMode(nextMode);
 
@@ -152,11 +152,7 @@ function AppContent() {
       setPayload(config.payload); // Sync to hook
       setErasureRate(config.erasureRate);
     }
-    if (nextMode === 'add_agent') {
-      setAddAgentRepoUrl(config.agentRepoUrl || '');
-      setPayload(config.payload);
-      setErasureRate(config.erasureRate);
-    }
+
     // Note: setHasStarted logic will trigger the effect below
     setHasStarted(true);
   };
@@ -353,15 +349,6 @@ function AppContent() {
               <BookDemo onBack={() => {
                 setHasStarted(false);
               }} />
-            ) : viewMode === 'add_agent' ? (
-              <AddAgentDashboard
-                onHome={handleHome}
-                apiKey={apiKey}
-                repoUrl={addAgentRepoUrl}
-                payload={payload}
-                erasureRate={erasureRate}
-                setErasureRate={setErasureRate}
-              />
             ) : isComparisonMode ? (
               // Comparison Mode Layout
               <div className="h-full p-4 grid grid-cols-[340px_1fr] gap-6 overflow-hidden max-w-[1920px] mx-auto">
@@ -373,10 +360,8 @@ function AppContent() {
                     visibleSteps={visibleSteps}
                     erasedIndices={erasedIndices}
                     scenarioId={activeScenario.id}
-                    evaluationResult={evaluationResult}
                     userQuery={customQuery || activeScenario.userQuery}
                     evaluationRef={evaluationRef}
-                    utilityMonitorRef={utilityMonitorRef}
                     chartRef={chartRef}
                   />
                 </div>
@@ -401,7 +386,7 @@ function AppContent() {
                   <DecoderPanel
                     visibleSteps={visibleSteps}
                     erasedIndices={erasedIndices}
-                    targetPayload={payload}
+                    targetPayload={activeScenario?.payload || payload}
                     erasureRate={erasureRate}
                     setErasureRate={setErasureRate}
                     channelNoiseRef={channelNoiseRef}

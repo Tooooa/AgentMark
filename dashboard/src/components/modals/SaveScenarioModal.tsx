@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, AlertCircle } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
 import { api } from '../../services/api';
-import type { Trajectory } from '../../data/mockData';
+import type { Trajectory } from '../../types';
 
 interface SaveScenarioModalProps {
     isOpen: boolean;
