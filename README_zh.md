@@ -162,6 +162,24 @@ export $(grep -v '^#' .env | xargs)
    
    确认 `experiments/toolbench/data/data/toolenv/tools` 目录下包含多个分类子目录（如 `Search/`, `Social_Media/` 等），每个分类下有工具的 JSON 文件。
 
+#### 4. (可选但推荐) 下载检索缓存
+
+由于 API 检索需要加载缓存文件，为了免去长时间的索引构建过程，建议下载预处理好的缓存文件。
+
+1. **下载文件**
+   
+   请从 **[在此处填入您的网盘或Release链接]** 下载 `retriever_cache.zip` 文件，并将其放置在项目根目录 `AgentMark/` 下。
+
+2. **解压文件**
+
+   ```bash
+   # 进入项目根目录
+   cd AgentMark
+
+   # 解压检索缓存到指定目录
+   unzip -o retriever_cache.zip -d experiments/toolbench/data/data/toolenv/tools
+   ```
+
 #### ALFWorld
 数据集在运行时会自动下载到 `~/.cache/alfworld`，或者您可以手动运行：
 ```bash

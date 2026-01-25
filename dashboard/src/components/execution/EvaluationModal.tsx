@@ -15,9 +15,10 @@ interface EvaluationModalProps {
     result: EvaluationResult | null;
     isLoading: boolean;
     variant?: 'default' | 'add_agent';
+    onReEvaluate?: () => void;
 }
 
-const EvaluationModal: React.FC<EvaluationModalProps> = ({ isOpen, onClose, result, isLoading, variant = 'default' }) => {
+const EvaluationModal: React.FC<EvaluationModalProps> = ({ isOpen, onClose, result, isLoading, variant = 'default', onReEvaluate }) => {
     const { locale } = useI18n();
     const isAddAgent = variant === 'add_agent';
 
@@ -29,9 +30,8 @@ const EvaluationModal: React.FC<EvaluationModalProps> = ({ isOpen, onClose, resu
                 {/* Header */}
                 <div className="bg-slate-50 p-6 flex justify-between items-center border-b border-slate-200">
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
-                            isAddAgent ? 'bg-amber-100' : 'bg-indigo-100'
-                        }`}>
+                        <div className={`p-2 rounded-lg ${isAddAgent ? 'bg-amber-100' : 'bg-indigo-100'
+                            }`}>
                             <Award size={24} className={isAddAgent ? 'text-amber-500' : 'text-indigo-500'} />
                         </div>
                         <div>
@@ -51,9 +51,8 @@ const EvaluationModal: React.FC<EvaluationModalProps> = ({ isOpen, onClose, resu
                 <div className="p-6 md:p-8">
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-12 gap-4">
-                            <div className={`w-12 h-12 border-4 rounded-full animate-spin ${
-                                isAddAgent ? 'border-amber-100 border-t-amber-300' : 'border-indigo-100 border-t-indigo-300'
-                            }`}></div>
+                            <div className={`w-12 h-12 border-4 rounded-full animate-spin ${isAddAgent ? 'border-amber-100 border-t-amber-300' : 'border-indigo-100 border-t-indigo-300'
+                                }`}></div>
                             <p className="text-slate-500 font-medium animate-pulse">{locale === 'zh' ? '正在分析轨迹...' : 'Analyzing trajectories...'}</p>
                         </div>
                     ) : result ? (
@@ -61,14 +60,12 @@ const EvaluationModal: React.FC<EvaluationModalProps> = ({ isOpen, onClose, resu
                             {/* Score Comparison */}
                             <div className="grid grid-cols-2 gap-6">
                                 {/* Model A (Baseline) */}
-                                <div className={`rounded-xl p-6 border flex flex-col items-center gap-3 relative overflow-hidden group transition-colors ${
-                                    isAddAgent 
-                                        ? 'bg-amber-100/30 border-amber-200/40 hover:border-amber-300/60' 
-                                        : 'bg-indigo-100/30 border-indigo-200/40 hover:border-indigo-300/60'
-                                }`}>
-                                    <div className={`absolute top-0 left-0 w-full h-1 ${
-                                        isAddAgent ? 'bg-amber-300/50' : 'bg-indigo-300/50'
-                                    }`}></div>
+                                <div className={`rounded-xl p-6 border flex flex-col items-center gap-3 relative overflow-hidden group transition-colors ${isAddAgent
+                                    ? 'bg-amber-100/30 border-amber-200/40 hover:border-amber-300/60'
+                                    : 'bg-indigo-100/30 border-indigo-200/40 hover:border-indigo-300/60'
+                                    }`}>
+                                    <div className={`absolute top-0 left-0 w-full h-1 ${isAddAgent ? 'bg-amber-300/50' : 'bg-indigo-300/50'
+                                        }`}></div>
                                     <span className="text-sm font-bold text-slate-600 uppercase tracking-widest">{locale === 'zh' ? '无水印Agent' : 'Base Model'}</span>
                                     <div className="text-5xl font-black text-slate-700 font-mono tracking-tighter">
                                         {result.model_a_score}<span className="text-2xl text-slate-400">/10</span>
@@ -81,28 +78,22 @@ const EvaluationModal: React.FC<EvaluationModalProps> = ({ isOpen, onClose, resu
                                 </div>
 
                                 {/* Model B (Ours) */}
-                                <div className={`rounded-xl p-6 border flex flex-col items-center gap-3 relative overflow-hidden group transition-colors ${
-                                    isAddAgent 
-                                        ? 'bg-amber-100/40 border-amber-200/50 hover:border-amber-300/70' 
-                                        : 'bg-indigo-100/40 border-indigo-200/50 hover:border-indigo-300/70'
-                                }`}>
-                                    <div className={`absolute top-0 left-0 w-full h-1 ${
-                                        isAddAgent ? 'bg-amber-400/60' : 'bg-indigo-400/60'
-                                    }`}></div>
-                                    <span className={`text-sm font-bold uppercase tracking-widest ${
-                                        isAddAgent ? 'text-amber-500' : 'text-indigo-500'
-                                    }`}>{locale === 'zh' ? '有水印Agent' : 'Ours (Watermarked)'}</span>
-                                    <div className={`text-5xl font-black font-mono tracking-tighter ${
-                                        isAddAgent ? 'text-amber-600' : 'text-indigo-600'
+                                <div className={`rounded-xl p-6 border flex flex-col items-center gap-3 relative overflow-hidden group transition-colors ${isAddAgent
+                                    ? 'bg-amber-100/40 border-amber-200/50 hover:border-amber-300/70'
+                                    : 'bg-indigo-100/40 border-indigo-200/50 hover:border-indigo-300/70'
                                     }`}>
-                                        {result.model_b_score}<span className={`text-2xl ${
-                                            isAddAgent ? 'text-amber-300' : 'text-indigo-300'
-                                        }`}>/10</span>
+                                    <div className={`absolute top-0 left-0 w-full h-1 ${isAddAgent ? 'bg-amber-400/60' : 'bg-indigo-400/60'
+                                        }`}></div>
+                                    <span className={`text-sm font-bold uppercase tracking-widest ${isAddAgent ? 'text-amber-500' : 'text-indigo-500'
+                                        }`}>{locale === 'zh' ? '有水印Agent' : 'Ours (Watermarked)'}</span>
+                                    <div className={`text-5xl font-black font-mono tracking-tighter ${isAddAgent ? 'text-amber-600' : 'text-indigo-600'
+                                        }`}>
+                                        {result.model_b_score}<span className={`text-2xl ${isAddAgent ? 'text-amber-300' : 'text-indigo-300'
+                                            }`}>/10</span>
                                     </div>
                                     {result.model_b_score > result.model_a_score && (
-                                        <div className={`absolute top-3 right-3 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 ${
-                                            isAddAgent ? 'text-amber-600 bg-amber-100/70' : 'text-indigo-600 bg-indigo-100/70'
-                                        }`}>
+                                        <div className={`absolute top-3 right-3 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 ${isAddAgent ? 'text-amber-600 bg-amber-100/70' : 'text-indigo-600 bg-indigo-100/70'
+                                            }`}>
                                             <Award size={12} /> {locale === 'zh' ? '胜出' : 'WINNER'}
                                         </div>
                                     )}
@@ -126,12 +117,21 @@ const EvaluationModal: React.FC<EvaluationModalProps> = ({ isOpen, onClose, resu
                 </div>
 
                 {/* Footer */}
-                <div className="bg-slate-50 p-4 border-t border-slate-200 flex justify-end">
+                <div className="bg-slate-50 p-4 border-t border-slate-200 flex justify-end gap-3">
+                    {onReEvaluate && (
+                        <button
+                            onClick={onReEvaluate}
+                            disabled={isLoading}
+                            className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all hover:shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            <Award size={16} />
+                            {locale === 'zh' ? '重新评估' : 'Re-evaluate'}
+                        </button>
+                    )}
                     <button
                         onClick={onClose}
-                        className={`px-6 py-2 text-white rounded-lg font-medium shadow-sm transition-all hover:shadow-md active:scale-95 ${
-                            isAddAgent ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'
-                        }`}
+                        className={`px-6 py-2 text-white rounded-lg font-medium shadow-sm transition-all hover:shadow-md active:scale-95 ${isAddAgent ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600'
+                            }`}
                     >
                         {locale === 'zh' ? '关闭报告' : 'Close Report'}
                     </button>

@@ -26,24 +26,7 @@ export interface StepResponse {
     stepIndex: number;
 }
 
-export interface AddAgentStartResponse {
-    sessionId: string;
-    proxyBase?: string;
-}
 
-export interface AddAgentTurnResponse {
-    sessionId: string;
-    step: any;
-    promptTrace?: any;
-    baselinePromptTrace?: any;
-    watermark?: any;
-}
-
-export interface AddAgentEvaluateResponse {
-    model_a_score: number;
-    model_b_score: number;
-    reason: string;
-}
 
 export const api = {
     async restoreSession(apiKey: string, scenarioId: string) {
@@ -54,10 +37,7 @@ export const api = {
         return res.data;
     },
 
-    initSession: async (apiKey: string, scenarioId: string, payload: string) => {
-        const response = await axios.post(`${API_BASE}/api/init`, { apiKey, scenarioId, payload });
-        return response.data; // { sessionId, task, totalSteps }
-    },
+
 
     initCustomSession: async (apiKey: string, query: string, payload: string) => {
         const response = await axios.post(`${API_BASE}/api/init_custom`, { apiKey, query, payload });
@@ -152,28 +132,6 @@ export const api = {
 
     togglePin: async (scenarioId: string) => {
         const response = await axios.post(`${API_BASE}/api/scenarios/${scenarioId}/toggle_pin`);
-        return response.data;
-    },
-
-    addAgentStart: async (apiKey: string, repoUrl: string): Promise<AddAgentStartResponse> => {
-        const response = await axios.post(`${API_BASE}/api/add_agent/start`, { apiKey, repoUrl });
-        return response.data;
-    },
-
-    addAgentTurn: async (
-        sessionId: string,
-        message: string,
-        apiKey: string
-    ): Promise<AddAgentTurnResponse> => {
-        const response = await axios.post(`${API_BASE}/api/add_agent/turn`, { sessionId, message, apiKey });
-        return response.data;
-    },
-
-    addAgentEvaluate: async (
-        sessionId: string,
-        language: string = 'en'
-    ): Promise<AddAgentEvaluateResponse> => {
-        const response = await axios.post(`${API_BASE}/api/add_agent/evaluate`, { sessionId, language });
         return response.data;
     }
 };

@@ -1,6 +1,5 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { scenarios } from '../data/mockData';
 import type { Trajectory, Step } from '../types';
 import { api } from '../services/api';
 
@@ -13,7 +12,7 @@ export const useSimulation = () => {
     const [payload, setPayload] = useState<string>("1101"); // Default binary string
 
     // Live State
-    const [isLiveMode, setIsLiveMode] = useState(true);
+
     const defaultApiKey = (import.meta as any)?.env?.DEEPSEEK_API_KEY || "";
     const [apiKey, setApiKey] = useState(defaultApiKey);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -68,23 +67,9 @@ export const useSimulation = () => {
     }, [liveScenario]);
 
     const allScenarios = useMemo(() => {
-        // Always merge saved scenarios with mock scenarios
-        // Saved scenarios (real history) come first
-        const savedMap = new Map(savedScenarios.map(s => [s.id, s]));
-        const merged = [...savedScenarios];
-
-        // Add mock scenarios only if not present in saved (by ID)
-        // and only in non-live mode
-        if (!isLiveMode) {
-            scenarios.forEach(s => {
-                if (!savedMap.has(s.id)) {
-                    merged.push(s);
-                }
-            });
-        }
-
-        return merged;
-    }, [savedScenarios, isLiveMode]);
+        // Saved scenarios (real history)
+        return [...savedScenarios];
+    }, [savedScenarios]);
 
     // Derived Active Scenario
     const activeScenario = useMemo(() => {
@@ -101,7 +86,7 @@ export const useSimulation = () => {
         }
 
         // Priority 1: If we have a liveScenario and it matches activeScenarioId, use it
-        if (isLiveMode && liveScenario && liveScenario.id === activeScenarioId) {
+        if (liveScenario && liveScenario.id === activeScenarioId) {
             return liveScenario;
         }
 
@@ -112,7 +97,7 @@ export const useSimulation = () => {
         }
 
         // Priority 3: If we have a liveScenario but ID doesn't match, still use it (current session)
-        if (isLiveMode && liveScenario) {
+        if (liveScenario) {
             return liveScenario;
         }
 
@@ -125,7 +110,7 @@ export const useSimulation = () => {
             totalSteps: 0,
             steps: []
         };
-    }, [activeScenarioId, isLiveMode, liveScenario, allScenarios]);
+    }, [activeScenarioId, liveScenario, allScenarios]);
 
     // Sync evaluation result when active scenario changes
     useEffect(() => {
@@ -144,7 +129,7 @@ export const useSimulation = () => {
             // Check if user clicked on a saved scenario (not current live session)
             const clickedScenario = savedScenarios.find(s => s.id === activeScenarioId);
 
-            if (isLiveMode && clickedScenario && clickedScenario.steps.length > 0) {
+            if (clickedScenario && clickedScenario.steps.length > 0) {
                 // Check if it's different from current liveScenario
                 if (!liveScenario || liveScenario.id !== activeScenarioId) {
                     // Load the scenario into view with correct ID
@@ -170,7 +155,7 @@ export const useSimulation = () => {
         };
 
         loadHistoryScenario();
-    }, [activeScenarioId, savedScenarios, isLiveMode]);
+    }, [activeScenarioId, savedScenarios]);
 
     const timerRef = useRef<number | null>(null);
 
@@ -179,12 +164,10 @@ export const useSimulation = () => {
         setCurrentStepIndex(0);
         setErasedIndices(new Set());
 
-        if (isLiveMode) {
-            setSessionId(null);
-            setLiveScenario(null);
-            setCustomQuery("");
-        }
-    }, [isLiveMode]);
+        setSessionId(null);
+        setLiveScenario(null);
+        setCustomQuery("");
+    }, []);
 
     // Live Session Init
     const handleInitSession = useCallback(async () => {
@@ -195,7 +178,11 @@ export const useSimulation = () => {
             if (customQuery) {
                 data = await api.initCustomSession(apiKey, customQuery, payload);
             } else {
-                data = await api.initSession(apiKey, activeScenarioId, payload);
+                // Simulation mode (initSession) has been removed.
+                // data = await api.initSession(apiKey, activeScenarioId, payload);
+                console.warn("Simulation mode is deprecated");
+                setIsLoading(false);
+                return;
             }
 
             setSessionId(data.sessionId);
@@ -226,332 +213,325 @@ export const useSimulation = () => {
 
     const handleNext = useCallback(async () => {
         // Live Mode Logic
-        if (isLiveMode) {
-            if (!sessionId || !liveScenario) return;
+        if (!sessionId || !liveScenario) return;
 
-            // Check Termination Condition - only check the LAST step
-            // We don't check all steps because historical completed steps shouldn't block new conversations
-            // After continue_session, the backend resets done state, so we should allow new steps
-            const stepsForStatus = liveScenario.steps;
-            const getWmDone = () => {
-                for (let i = stepsForStatus.length - 1; i >= 0; i--) {
-                    const s = stepsForStatus[i];
-                    if (s.stepType === 'user_input') continue;
-                    if (s.isHidden) continue;
-                    return s.stepType === 'finish' || !!s.finalAnswer;
-                }
-                return false;
-            };
-            const getBlDone = () => {
-                for (let i = stepsForStatus.length - 1; i >= 0; i--) {
-                    const s = stepsForStatus[i];
-                    if (s.stepType === 'user_input') continue;
-                    const b = s.baseline;
-                    if (!b) continue;
-                    if (b.isHidden) continue;
-                    return b.stepType === 'finish' || !!b.finalAnswer;
-                }
-                return false;
-            };
-
-            const lastStep = stepsForStatus[stepsForStatus.length - 1];
-            if (lastStep && lastStep.stepType !== 'user_input') {
-                const wmDone = getWmDone();
-                const blDone = getBlDone();
-                if (wmDone && blDone) {
-                    setIsPlaying(false);
-                    return;
-                }
+        // Check Termination Condition - only check the LAST step
+        // We don't check all steps because historical completed steps shouldn't block new conversations
+        // After continue_session, the backend resets done state, so we should allow new steps
+        const stepsForStatus = liveScenario.steps;
+        const getWmDone = () => {
+            for (let i = stepsForStatus.length - 1; i >= 0; i--) {
+                const s = stepsForStatus[i];
+                if (s.stepType === 'user_input') continue;
+                if (s.isHidden) continue;
+                return s.stepType === 'finish' || !!s.finalAnswer;
             }
+            return false;
+        };
+        const getBlDone = () => {
+            for (let i = stepsForStatus.length - 1; i >= 0; i--) {
+                const s = stepsForStatus[i];
+                if (s.stepType === 'user_input') continue;
+                const b = s.baseline;
+                if (!b) continue;
+                if (b.isHidden) continue;
+                return b.stepType === 'finish' || !!b.finalAnswer;
+            }
+            return false;
+        };
 
-            // Prevent stepping if we are already at the end of what we have fetched...
-            // UNLESS we are fetching a NEW step.
-            // Logic: "Next" in live mode triggers generation of the next step.
+        const lastStep = stepsForStatus[stepsForStatus.length - 1];
+        if (lastStep && lastStep.stepType !== 'user_input') {
+            const wmDone = getWmDone();
+            const blDone = getBlDone();
+            if (wmDone && blDone) {
+                setIsPlaying(false);
+                return;
+            }
+        }
 
-            setIsLoading(true);
-            try {
-                // Create a placeholder step for streaming
-                const initialStepIndex = liveScenario.steps.length;
-                let currentThought = "";
-                let currentBaselineThought = "";
+        // Prevent stepping if we are already at the end of what we have fetched...
+        // UNLESS we are fetching a NEW step.
+        // Logic: "Next" in live mode triggers generation of the next step.
 
-                // Determine if agents are still running by checking last non-user step
-                // After user continuation, agents should NOT be considered "done"
-                const prevSteps = liveScenario.steps;
-                const lastNonUserStep = [...prevSteps].reverse().find(s => s.stepType !== 'user_input');
+        setIsLoading(true);
+        try {
+            // Create a placeholder step for streaming
+            const initialStepIndex = liveScenario.steps.length;
+            let currentThought = "";
+            let currentBaselineThought = "";
 
-                // If last step was user_input, agents need to respond - not done
-                const lastWasUserInput = prevSteps.length > 0 && prevSteps[prevSteps.length - 1].stepType === 'user_input';
-                const isWmPreDone = !lastWasUserInput && lastNonUserStep && (lastNonUserStep.stepType === 'finish' || !!lastNonUserStep.finalAnswer);
-                const isBlPreDone = !lastWasUserInput && lastNonUserStep && (lastNonUserStep.baseline?.stepType === 'finish' || !!lastNonUserStep.baseline?.finalAnswer);
+            // Determine if agents are still running by checking last non-user step
+            // After user continuation, agents should NOT be considered "done"
+            const prevSteps = liveScenario.steps;
+            const lastNonUserStep = [...prevSteps].reverse().find(s => s.stepType !== 'user_input');
 
-                // Add initial empty step
-                setLiveScenario(prev => {
-                    if (!prev) return null;
-                    const placeholderStep: Step = {
-                        stepIndex: initialStepIndex,
-                        timestamp: new Date().toLocaleTimeString('en-GB'), // 24h format
-                        thought: isWmPreDone ? "" : "Thinking...",
+            // If last step was user_input, agents need to respond - not done
+            const lastWasUserInput = prevSteps.length > 0 && prevSteps[prevSteps.length - 1].stepType === 'user_input';
+            const isWmPreDone = !lastWasUserInput && lastNonUserStep && (lastNonUserStep.stepType === 'finish' || !!lastNonUserStep.finalAnswer);
+            const isBlPreDone = !lastWasUserInput && lastNonUserStep && (lastNonUserStep.baseline?.stepType === 'finish' || !!lastNonUserStep.baseline?.finalAnswer);
+
+            // Add initial empty step
+            setLiveScenario(prev => {
+                if (!prev) return null;
+                const placeholderStep: Step = {
+                    stepIndex: initialStepIndex,
+                    timestamp: new Date().toLocaleTimeString('en-GB'), // 24h format
+                    thought: isWmPreDone ? "" : "Thinking...",
+                    action: "",
+                    distribution: [],
+                    watermark: { bits: "", matrixRows: [], rankContribution: 0 },
+                    stepType: isWmPreDone ? 'tool' : 'tool', // Avoid 'finish' to prevent duplicate UI card
+                    toolDetails: "",
+                    isHidden: isWmPreDone,
+                    baseline: {
+                        thought: isBlPreDone ? "" : "Thinking...",
                         action: "",
                         distribution: [],
-                        watermark: { bits: "", matrixRows: [], rankContribution: 0 },
-                        stepType: isWmPreDone ? 'tool' : 'tool', // Avoid 'finish' to prevent duplicate UI card
                         toolDetails: "",
-                        isHidden: isWmPreDone,
-                        baseline: {
-                            thought: isBlPreDone ? "" : "Thinking...",
-                            action: "",
-                            distribution: [],
-                            toolDetails: "",
-                            stepType: isBlPreDone ? 'tool' : 'tool', // Avoid 'finish' here too
-                            isHidden: isBlPreDone
-                        }
-                    };
-                    return {
-                        ...prev,
-                        totalSteps: prev.steps.length + 1,
-                        steps: [...prev.steps, placeholderStep]
-                    };
-                });
-
-                // Move cursor immediately
-                setCurrentStepIndex(prev => prev + 1);
-
-                // Track if we received any result data for this step
-                let receivedWatermarkedResult = false;
-                let receivedBaselineResult = false;
-
-                await api.stepStream(sessionId, (chunk) => {
-                    if (chunk.type === 'thought') {
-                        if (chunk.content) {
-                            if (chunk.agent === 'baseline') {
-                                currentBaselineThought += chunk.content;
-                                setLiveScenario(prev => {
-                                    if (!prev) return null;
-                                    const steps = [...prev.steps];
-                                    if (steps[initialStepIndex]) {
-                                        // Ensure baseline object exists
-                                        const baseline = steps[initialStepIndex].baseline || {
-                                            thought: "", action: "", distribution: [], toolDetails: "", stepType: 'tool', isHidden: false
-                                        };
-                                        steps[initialStepIndex] = {
-                                            ...steps[initialStepIndex],
-                                            baseline: {
-                                                ...baseline,
-                                                thought: currentBaselineThought
-                                            }
-                                        };
-                                    }
-                                    return { ...prev, steps };
-                                });
-                            } else {
-                                // Default to watermarked
-                                currentThought += chunk.content;
-                                setLiveScenario(prev => {
-                                    if (!prev) return null;
-                                    const steps = [...prev.steps];
-                                    if (steps[initialStepIndex]) {
-                                        steps[initialStepIndex] = {
-                                            ...steps[initialStepIndex],
-                                            thought: currentThought
-                                        };
-                                    }
-                                    return { ...prev, steps };
-                                });
-                            }
-                        }
-                    } else if (chunk.type === 'result') {
-                        const stepData = chunk.data;
-                        const targetAgent = stepData.agent || 'watermarked'; // default to watermarked if missing
-
-                        // Mark that we received a result
-                        if (targetAgent === 'watermarked') {
-                            receivedWatermarkedResult = true;
-                        } else if (targetAgent === 'baseline') {
-                            receivedBaselineResult = true;
-                        }
-
-                        setLiveScenario(prev => {
-                            if (!prev) return null;
-                            const steps = [...prev.steps];
-                            if (!steps[initialStepIndex]) return prev;
-
-                            const existingStep = steps[initialStepIndex];
-
-                            if (targetAgent === 'watermarked') {
-                                // Update Main (Watermarked) Data
-                                // Note: Keep using initialStepIndex as stepIndex to ensure sequential numbering
-                                // Backend's stepIndex may not be sequential due to various reasons
-                                steps[initialStepIndex] = {
-                                    ...existingStep,
-                                    stepIndex: initialStepIndex,
-                                    thought: stepData.thought || existingStep.thought,
-                                    action: stepData.action,
-                                    distribution: stepData.distribution || [],
-                                    watermark: {
-                                        bits: stepData.watermark?.bits || "",
-                                        matrixRows: stepData.watermark?.matrixRows || [],
-                                        rankContribution: stepData.watermark?.rankContribution || 0
-                                    },
-                                    stepType: stepData.done ? 'finish' : 'tool',
-                                    toolDetails: stepData.observation,
-                                    metrics: stepData.metrics,
-                                    finalAnswer: stepData.done ? (stepData.final_answer || stepData.thought || "") : undefined
-                                };
-                            } else if (targetAgent === 'baseline') {
-                                const baselineExisting = existingStep.baseline || {
-                                    thought: "",
-                                    action: "",
-                                    distribution: [],
-                                    toolDetails: "",
-                                    stepType: 'tool' as const,
-                                    isHidden: false
-                                };
-                                // Update Baseline Data
-                                steps[initialStepIndex] = {
-                                    ...existingStep,
-                                    baseline: {
-                                        ...baselineExisting,
-                                        thought: stepData.thought || baselineExisting.thought || "",
-                                        action: stepData.action,
-                                        toolDetails: stepData.observation,
-                                        distribution: stepData.distribution || [],
-                                        stepType: stepData.done ? 'finish' : 'tool',
-                                        finalAnswer: stepData.done ? (stepData.final_answer || stepData.thought || "") : undefined,
-                                        metrics: stepData.metrics
-                                    }
-                                };
-                            }
-
-                            return { ...prev, steps };
-                        });
-
-                        // Check if task is completed after receiving result
-                        setLiveScenario(prev => {
-                            if (!prev) return null;
-                            const updatedSteps = prev.steps;
-                            const getWmDone = () => {
-                                for (let i = updatedSteps.length - 1; i >= 0; i--) {
-                                    const s = updatedSteps[i];
-                                    if (s.stepType === 'user_input') continue;
-                                    if (s.isHidden) continue;
-                                    return s.stepType === 'finish' || !!s.finalAnswer;
-                                }
-                                return false;
-                            };
-                            const getBlDone = () => {
-                                for (let i = updatedSteps.length - 1; i >= 0; i--) {
-                                    const s = updatedSteps[i];
-                                    if (s.stepType === 'user_input') continue;
-                                    const b = s.baseline;
-                                    if (!b) continue;
-                                    if (b.isHidden) continue;
-                                    return b.stepType === 'finish' || !!b.finalAnswer;
-                                }
-                                return false;
-                            };
-                            const wmDone = getWmDone();
-                            const blDone = getBlDone();
-                            if (wmDone && blDone) {
-                                setIsPlaying(false);
-                            }
-                            return prev;
-                        });
+                        stepType: isBlPreDone ? 'tool' : 'tool', // Avoid 'finish' here too
+                        isHidden: isBlPreDone
                     }
-                });
+                };
+                return {
+                    ...prev,
+                    totalSteps: prev.steps.length + 1,
+                    steps: [...prev.steps, placeholderStep]
+                };
+            });
 
-                // After stream ends, check if placeholder step received any data
-                // Only remove it if it's truly empty (no data received from either agent)
-                // DO NOT remove steps that have received data, even if task is completed
-                setLiveScenario(prev => {
-                    if (!prev) return null;
-                    const steps = [...prev.steps];
-                    const placeholderStep = steps[initialStepIndex];
-
-                    if (placeholderStep) {
-                        // Check if this step received any real data
-                        // A step has data if it has action, non-placeholder thought, or distribution
-                        const hasWatermarkedData = placeholderStep.action ||
-                            (placeholderStep.thought && placeholderStep.thought !== "Thinking..." && placeholderStep.thought !== "") ||
-                            placeholderStep.distribution.length > 0 ||
-                            placeholderStep.stepType === 'finish' ||
-                            !!placeholderStep.finalAnswer;
-
-                        const hasBaselineData = placeholderStep.baseline?.action ||
-                            (placeholderStep.baseline?.thought && placeholderStep.baseline.thought !== "Thinking..." && placeholderStep.baseline.thought !== "") ||
-                            (placeholderStep.baseline?.distribution?.length ?? 0) > 0 ||
-                            placeholderStep.baseline?.stepType === 'finish' ||
-                            !!placeholderStep.baseline?.finalAnswer;
-
-                        // Only remove if we didn't receive any result AND the step has no data
-                        // This means it's a truly empty placeholder that was created but never filled
-                        const shouldRemove = !receivedWatermarkedResult && !receivedBaselineResult &&
-                            !hasWatermarkedData && !hasBaselineData;
-
-                        if (shouldRemove) {
-                            // Remove the invalid placeholder step (only if it's truly empty)
-                            steps.splice(initialStepIndex, 1);
-                            return {
-                                ...prev,
-                                totalSteps: steps.length,
-                                steps: steps
-                            };
-                        }
-                    }
-                    return prev;
-                });
-
-                // Auto-save after each step completes
-                // Wait a bit for state to update, then save
-                setTimeout(async () => {
-                    if (sessionId) {
-                        try {
-                            // Re-fetch the latest liveScenario from state
-                            setLiveScenario(currentScenario => {
-                                if (!currentScenario) return null;
-
-                                // Save the current state
-                                const updatedScenario = {
-                                    ...currentScenario,
-                                    id: sessionId
-                                };
-
-                                // Generate title if needed
-                                let titleToSave = updatedScenario.title;
-                                if ((!titleToSave.en || titleToSave.en === "Live Session" || titleToSave.en === "New Session" || titleToSave.en === "New Chat") && updatedScenario.steps.length > 0) {
-                                    const firstMessage = updatedScenario.userQuery || updatedScenario.steps[0]?.thought || "";
-                                    const titlePreview = firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage;
-                                    titleToSave = { en: titlePreview, zh: titlePreview };
-                                }
-
-                                // Save to database (fire and forget)
-                                api.saveScenario(titleToSave, updatedScenario, sessionId).then(() => {
-                                    console.log('[Auto-save] Saved after step completion');
-                                }).catch(err => {
-                                    console.error('[Auto-save] Failed to save scenario:', err);
-                                });
-
-                                return currentScenario; // Return unchanged
-                            });
-                        } catch (err) {
-                            console.error('[Auto-save] Error during save:', err);
-                        }
-                    }
-                }, 500); // Wait 500ms for state updates to complete
-
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setIsLoading(false);
-            }
-            return;
-        }
-
-        // Static Logic
-        if (currentStepIndex < activeScenario.totalSteps) {
+            // Move cursor immediately
             setCurrentStepIndex(prev => prev + 1);
+
+            // Track if we received any result data for this step
+            let receivedWatermarkedResult = false;
+            let receivedBaselineResult = false;
+
+            await api.stepStream(sessionId, (chunk) => {
+                if (chunk.type === 'thought') {
+                    if (chunk.content) {
+                        if (chunk.agent === 'baseline') {
+                            currentBaselineThought += chunk.content;
+                            setLiveScenario(prev => {
+                                if (!prev) return null;
+                                const steps = [...prev.steps];
+                                if (steps[initialStepIndex]) {
+                                    // Ensure baseline object exists
+                                    const baseline = steps[initialStepIndex].baseline || {
+                                        thought: "", action: "", distribution: [], toolDetails: "", stepType: 'tool', isHidden: false
+                                    };
+                                    steps[initialStepIndex] = {
+                                        ...steps[initialStepIndex],
+                                        baseline: {
+                                            ...baseline,
+                                            thought: currentBaselineThought
+                                        }
+                                    };
+                                }
+                                return { ...prev, steps };
+                            });
+                        } else {
+                            // Default to watermarked
+                            currentThought += chunk.content;
+                            setLiveScenario(prev => {
+                                if (!prev) return null;
+                                const steps = [...prev.steps];
+                                if (steps[initialStepIndex]) {
+                                    steps[initialStepIndex] = {
+                                        ...steps[initialStepIndex],
+                                        thought: currentThought
+                                    };
+                                }
+                                return { ...prev, steps };
+                            });
+                        }
+                    }
+                } else if (chunk.type === 'result') {
+                    const stepData = chunk.data;
+                    const targetAgent = stepData.agent || 'watermarked'; // default to watermarked if missing
+
+                    // Mark that we received a result
+                    if (targetAgent === 'watermarked') {
+                        receivedWatermarkedResult = true;
+                    } else if (targetAgent === 'baseline') {
+                        receivedBaselineResult = true;
+                    }
+
+                    setLiveScenario(prev => {
+                        if (!prev) return null;
+                        const steps = [...prev.steps];
+                        if (!steps[initialStepIndex]) return prev;
+
+                        const existingStep = steps[initialStepIndex];
+
+                        if (targetAgent === 'watermarked') {
+                            // Update Main (Watermarked) Data
+                            // Note: Keep using initialStepIndex as stepIndex to ensure sequential numbering
+                            // Backend's stepIndex may not be sequential due to various reasons
+                            steps[initialStepIndex] = {
+                                ...existingStep,
+                                stepIndex: initialStepIndex,
+                                thought: stepData.thought || existingStep.thought,
+                                action: stepData.action,
+                                distribution: stepData.distribution || [],
+                                watermark: {
+                                    bits: stepData.watermark?.bits || "",
+                                    matrixRows: stepData.watermark?.matrixRows || [],
+                                    rankContribution: stepData.watermark?.rankContribution || 0
+                                },
+                                stepType: stepData.done ? 'finish' : 'tool',
+                                toolDetails: stepData.observation,
+                                metrics: stepData.metrics,
+                                finalAnswer: stepData.done ? (stepData.final_answer || stepData.thought || "") : undefined
+                            };
+                        } else if (targetAgent === 'baseline') {
+                            const baselineExisting = existingStep.baseline || {
+                                thought: "",
+                                action: "",
+                                distribution: [],
+                                toolDetails: "",
+                                stepType: 'tool' as const,
+                                isHidden: false
+                            };
+                            // Update Baseline Data
+                            steps[initialStepIndex] = {
+                                ...existingStep,
+                                baseline: {
+                                    ...baselineExisting,
+                                    thought: stepData.thought || baselineExisting.thought || "",
+                                    action: stepData.action,
+                                    toolDetails: stepData.observation,
+                                    distribution: stepData.distribution || [],
+                                    stepType: stepData.done ? 'finish' : 'tool',
+                                    finalAnswer: stepData.done ? (stepData.final_answer || stepData.thought || "") : undefined,
+                                    metrics: stepData.metrics
+                                }
+                            };
+                        }
+
+                        return { ...prev, steps };
+                    });
+
+                    // Check if task is completed after receiving result
+                    setLiveScenario(prev => {
+                        if (!prev) return null;
+                        const updatedSteps = prev.steps;
+                        const getWmDone = () => {
+                            for (let i = updatedSteps.length - 1; i >= 0; i--) {
+                                const s = updatedSteps[i];
+                                if (s.stepType === 'user_input') continue;
+                                if (s.isHidden) continue;
+                                return s.stepType === 'finish' || !!s.finalAnswer;
+                            }
+                            return false;
+                        };
+                        const getBlDone = () => {
+                            for (let i = updatedSteps.length - 1; i >= 0; i--) {
+                                const s = updatedSteps[i];
+                                if (s.stepType === 'user_input') continue;
+                                const b = s.baseline;
+                                if (!b) continue;
+                                if (b.isHidden) continue;
+                                return b.stepType === 'finish' || !!b.finalAnswer;
+                            }
+                            return false;
+                        };
+                        const wmDone = getWmDone();
+                        const blDone = getBlDone();
+                        if (wmDone && blDone) {
+                            setIsPlaying(false);
+                        }
+                        return prev;
+                    });
+                }
+            });
+
+            // After stream ends, check if placeholder step received any data
+            // Only remove it if it's truly empty (no data received from either agent)
+            // DO NOT remove steps that have received data, even if task is completed
+            setLiveScenario(prev => {
+                if (!prev) return null;
+                const steps = [...prev.steps];
+                const placeholderStep = steps[initialStepIndex];
+
+                if (placeholderStep) {
+                    // Check if this step received any real data
+                    // A step has data if it has action, non-placeholder thought, or distribution
+                    const hasWatermarkedData = placeholderStep.action ||
+                        (placeholderStep.thought && placeholderStep.thought !== "Thinking..." && placeholderStep.thought !== "") ||
+                        placeholderStep.distribution.length > 0 ||
+                        placeholderStep.stepType === 'finish' ||
+                        !!placeholderStep.finalAnswer;
+
+                    const hasBaselineData = placeholderStep.baseline?.action ||
+                        (placeholderStep.baseline?.thought && placeholderStep.baseline.thought !== "Thinking..." && placeholderStep.baseline.thought !== "") ||
+                        (placeholderStep.baseline?.distribution?.length ?? 0) > 0 ||
+                        placeholderStep.baseline?.stepType === 'finish' ||
+                        !!placeholderStep.baseline?.finalAnswer;
+
+                    // Only remove if we didn't receive any result AND the step has no data
+                    // This means it's a truly empty placeholder that was created but never filled
+                    const shouldRemove = !receivedWatermarkedResult && !receivedBaselineResult &&
+                        !hasWatermarkedData && !hasBaselineData;
+
+                    if (shouldRemove) {
+                        // Remove the invalid placeholder step (only if it's truly empty)
+                        steps.splice(initialStepIndex, 1);
+                        return {
+                            ...prev,
+                            totalSteps: steps.length,
+                            steps: steps
+                        };
+                    }
+                }
+                return prev;
+            });
+
+            // Auto-save after each step completes
+            // Wait a bit for state to update, then save
+            setTimeout(async () => {
+                if (sessionId) {
+                    try {
+                        // Re-fetch the latest liveScenario from state
+                        setLiveScenario(currentScenario => {
+                            if (!currentScenario) return null;
+
+                            // Save the current state
+                            const updatedScenario = {
+                                ...currentScenario,
+                                id: sessionId
+                            };
+
+                            // Generate title if needed
+                            let titleToSave = updatedScenario.title;
+                            if ((!titleToSave.en || titleToSave.en === "Live Session" || titleToSave.en === "New Session" || titleToSave.en === "New Chat") && updatedScenario.steps.length > 0) {
+                                const firstMessage = updatedScenario.userQuery || updatedScenario.steps[0]?.thought || "";
+                                const titlePreview = firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage;
+                                titleToSave = { en: titlePreview, zh: titlePreview };
+                            }
+
+                            // Save to database (fire and forget)
+                            api.saveScenario(titleToSave, updatedScenario, sessionId).then(() => {
+                                console.log('[Auto-save] Saved after step completion');
+                            }).catch(err => {
+                                console.error('[Auto-save] Failed to save scenario:', err);
+                            });
+
+                            return currentScenario; // Return unchanged
+                        });
+                    } catch (err) {
+                        console.error('[Auto-save] Error during save:', err);
+                    }
+                }
+            }, 500); // Wait 500ms for state updates to complete
+
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
         }
-    }, [currentStepIndex, activeScenario, isLiveMode, sessionId, liveScenario]);
+        return;
+    }, [currentStepIndex, activeScenario, sessionId, liveScenario]);
 
     const handlePrev = useCallback(() => {
         if (currentStepIndex > 0) {
@@ -581,30 +561,20 @@ export const useSimulation = () => {
     useEffect(() => {
         if (isPlaying) {
             timerRef.current = window.setInterval(async () => {
-                if (isLiveMode) {
-                    if (isLoading) return; // Wait for request
-                    await handleNext();
-                } else {
-                    setCurrentStepIndex(prev => {
-                        if (prev >= activeScenario.totalSteps) {
-                            setIsPlaying(false);
-                            return prev;
-                        }
-                        return prev + 1;
-                    });
-                }
-            }, isLiveMode ? 2000 : 1000); // Slower for live mode API calls
+                if (isLoading) return; // Wait for request
+                await handleNext();
+            }, 2000); // Slower for live mode API calls
         } else {
             if (timerRef.current) clearInterval(timerRef.current);
         }
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [isPlaying, activeScenario, isLiveMode, isLoading, handleNext]);
+    }, [isPlaying, activeScenario, isLoading, handleNext]);
 
     // Auto-save effect: Save every 10 seconds if there are changes
     useEffect(() => {
-        if (!isLiveMode || !liveScenario || !sessionId || liveScenario.steps.length === 0) {
+        if (!liveScenario || !sessionId || liveScenario.steps.length === 0) {
             return;
         }
 
@@ -631,7 +601,8 @@ export const useSimulation = () => {
         }, 10000); // Save every 10 seconds
 
         return () => clearInterval(autoSaveInterval);
-    }, [isLiveMode, liveScenario, sessionId]);
+        return () => clearInterval(autoSaveInterval);
+    }, [liveScenario, sessionId]);
 
     return {
         scenarios: allScenarios,
@@ -650,8 +621,9 @@ export const useSimulation = () => {
         handlePrev,
         visibleSteps: activeScenario.steps.slice(0, currentStepIndex),
         // Live Mode Props
-        isLiveMode,
-        setIsLiveMode,
+        // Live Mode Props
+        // isLiveMode: true, // Always true
+        // setIsLiveMode, // Removed
         isComparisonMode, // New
         setIsComparisonMode, // New
         apiKey,
@@ -671,7 +643,7 @@ export const useSimulation = () => {
 
         handleContinue: async (prompt: string) => {
             // Case 0: New Session (No Session ID yet - either from welcome page or "New Chat")
-            if (!sessionId && isLiveMode) {
+            if (!sessionId) {
                 // Initialize Session with this prompt as the custom query
                 setIsLoading(true);
                 setCustomQuery(prompt);
@@ -743,7 +715,6 @@ export const useSimulation = () => {
 
                     // Ensure liveScenario is synced with the restored session
                     setLiveScenario({ ...activeScenario });
-                    setIsLiveMode(true);
                     setCurrentStepIndex(activeScenario.steps.length);
                 } catch (e) {
                     console.error("Failed to restore session", e);
@@ -815,9 +786,38 @@ export const useSimulation = () => {
                         console.error('[Auto-save] Error during continue save:', err);
                     }
                 }
-            } catch (e) {
-                console.error(e);
-                alert("Failed to continue session");
+            } catch (e: any) {
+                // 1222: Handle 404 (Session Not Found) by attempting to restore and retry
+                if (e.response?.status === 404) {
+                    console.log("Session not found on server (404). Attempting to restore...", currentSessionId);
+                    try {
+                        const restoreData = await api.restoreSession(apiKey, activeScenarioId);
+                        const restoredSessionId = restoreData.sessionId;
+                        setSessionId(restoredSessionId);
+                        console.log("Session restored. Retrying continue...", restoredSessionId);
+
+                        await api.continueSession(restoredSessionId, prompt);
+
+                        setIsPlaying(true);
+                        // Auto-save after user input (retry)
+                        if (liveScenario) {
+                            const updatedScenario = { ...liveScenario, id: restoredSessionId };
+                            setLiveScenario(updatedScenario);
+                            // Background save
+                            api.saveScenario(updatedScenario.title, updatedScenario, updatedScenario.id, "custom")
+                                .catch((err: any) => console.error(err));
+                        }
+
+                    } catch (retryError: any) {
+                        console.error("Retry failed:", retryError);
+                        const msg = retryError.response?.data?.detail || retryError.message || "Unknown error";
+                        alert(`Failed to restore and continue session: ${msg}`);
+                    }
+                } else {
+                    console.error(e);
+                    const msg = e.response?.data?.detail || e.message || "Unknown error";
+                    alert(`Failed to continue session: ${msg}`);
+                }
             } finally {
                 setIsLoading(false);
             }
@@ -826,7 +826,7 @@ export const useSimulation = () => {
 
         handleNewConversation: async () => {
             // Auto Save current if valid (relaxed conditions)
-            if (isLiveMode && liveScenario && liveScenario.steps.length > 0) {
+            if (liveScenario && liveScenario.steps.length > 0) {
                 try {
                     // Use sessionId if available, otherwise generate one from liveScenario.id
                     const saveId = sessionId || liveScenario.id;
@@ -887,7 +887,7 @@ export const useSimulation = () => {
 
             setLiveScenario(newEmptyScenario);
             setActiveScenarioId(newChatId);
-            setIsLiveMode(true);
+
         },
 
         saveCurrentScenario: async () => {
@@ -898,7 +898,7 @@ export const useSimulation = () => {
 
                 // If we got a new ID (was temp), update the scenario in state
                 if (res.id && activeScenario.id !== res.id) {
-                    if (isLiveMode && liveScenario && liveScenario.id === activeScenario.id) {
+                    if (liveScenario && liveScenario.id === activeScenario.id) {
                         setLiveScenario(prev => prev ? ({ ...prev, id: res.id }) : null);
                     }
                 }
@@ -915,14 +915,14 @@ export const useSimulation = () => {
         setEvaluationResult,
         isEvaluationModalOpen, // Export
         setIsEvaluationModalOpen, // Export
-        evaluateSession: async (language: string = "en") => {
+        evaluateSession: async (language: string = "en", force: boolean = false) => {
             // Check if we have an active scenario
             if (!activeScenarioId || !activeScenario || activeScenario.steps.length === 0) {
                 alert(language === 'zh' ? '没有可评估的对话' : 'No conversation to evaluate');
                 return;
             }
 
-            if (evaluationResult) {
+            if (evaluationResult && !force) {
                 setIsEvaluationModalOpen(true);
                 return;
             }
@@ -1034,7 +1034,7 @@ export const useSimulation = () => {
                 };
                 setLiveScenario(newEmptyScenario);
                 setActiveScenarioId(newChatId);
-                setIsLiveMode(true);
+
                 setSessionId(null);
 
                 // Refresh scenarios list
@@ -1066,7 +1066,7 @@ export const useSimulation = () => {
                     };
                     setLiveScenario(newEmptyScenario);
                     setActiveScenarioId(newChatId);
-                    setIsLiveMode(true);
+
                     setSessionId(null);
                 }
 

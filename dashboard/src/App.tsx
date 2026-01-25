@@ -12,7 +12,6 @@ import SettingsModal from './components/modals/SettingsModal';
 import ConfirmDialog from './components/modals/ConfirmDialog';
 import EvaluationModal from './components/execution/EvaluationModal';
 import TutorialTooltip from './components/tutorial/TutorialTooltip';
-import BookDemo from './components/layout/BookDemo';
 import { useSimulation } from './hooks/useSimulation';
 import { I18nProvider, useI18n } from './i18n/I18nContext';
 
@@ -28,16 +27,16 @@ function AppContent() {
     refreshScenarios, // New
     isPlaying,
     setIsPlaying,
-    currentStepIndex,
     erasureRate,
     setErasureRate,
     erasedIndices,
     handleReset,
-    handleNext,
-    handlePrev,
     visibleSteps,
-    isLiveMode,
-    setIsLiveMode,
+
+
+
+    // isLiveMode, // Removed
+    // setIsLiveMode, // Removed
     handleInitSession,
     setCustomQuery,
     setApiKey,
@@ -72,7 +71,6 @@ function AppContent() {
   } = useSimulation();
 
   const [hasStarted, setHasStarted] = useState(false);
-  const [viewMode, setViewMode] = useState<'dashboard' | 'book_demo'>('dashboard');
   // const [isComparisonMode, setIsComparisonMode] = useState(false); // Removed
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -95,7 +93,6 @@ function AppContent() {
 
   const handleHome = useCallback(() => {
     setHasStarted(false);
-    setViewMode('dashboard');
     handleReset();
   }, [handleReset]);
 
@@ -133,25 +130,15 @@ function AppContent() {
 
 
 
-  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; mode?: 'dashboard' | 'book_demo'; agentRepoUrl?: string }) => {
-    const nextMode = config.mode || 'dashboard';
-    setViewMode(nextMode);
-
-    if (nextMode === 'book_demo') {
-      setHasStarted(true);
-      return;
+  const handleStart = (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; agentRepoUrl?: string }) => {
+    setActiveScenarioId(config.scenarioId);
+    if (config.query) {
+      setCustomQuery(config.query);
+    } else {
+      setCustomQuery(""); // Reset if not custom
     }
-
-    if (nextMode === 'dashboard') {
-      setActiveScenarioId(config.scenarioId);
-      if (config.query) {
-        setCustomQuery(config.query);
-      } else {
-        setCustomQuery(""); // Reset if not custom
-      }
-      setPayload(config.payload); // Sync to hook
-      setErasureRate(config.erasureRate);
-    }
+    setPayload(config.payload); // Sync to hook
+    setErasureRate(config.erasureRate);
 
     // Note: setHasStarted logic will trigger the effect below
     setHasStarted(true);
@@ -221,7 +208,7 @@ function AppContent() {
 
   // 初次进入主页面时自动弹出设置窗口
   useEffect(() => {
-    if (!hasStarted || viewMode !== 'dashboard') {
+    if (!hasStarted) {
       return;
     }
     if (isFirstEntry) {
@@ -231,20 +218,17 @@ function AppContent() {
         setIsFirstEntry(false);
       }, 0);
     }
-  }, [hasStarted, isFirstEntry, viewMode]);
+  }, [hasStarted, isFirstEntry]);
 
   // 当设置窗口关闭时，如果是首次进入且未完成教程，则启动新手引导
   useEffect(() => {
-    if (viewMode !== 'dashboard') {
-      return;
-    }
-    if (!isSettingsModalOpen && !isFirstEntry && !hasCompletedTutorial && !showTutorial && tutorialStep === 1) {
+    if (hasStarted && !isSettingsModalOpen && !isFirstEntry && !hasCompletedTutorial && !showTutorial && tutorialStep === 1) {
       // 等待设置窗口关闭动画完成后再启动引导
       setTimeout(() => {
         setShowTutorial(true);
       }, 500);
     }
-  }, [isSettingsModalOpen, isFirstEntry, hasCompletedTutorial, showTutorial, tutorialStep, viewMode]);
+  }, [isSettingsModalOpen, isFirstEntry, hasCompletedTutorial, showTutorial, tutorialStep]);
 
   // 首次切换到Compare模式时启动Compare教程（仅当有活动对话时）
   useEffect(() => {
@@ -286,26 +270,13 @@ function AppContent() {
       scenarios={scenarios}
       activeScenarioId={activeScenarioId}
       onSelectScenario={setActiveScenarioId}
-      isPlaying={isPlaying}
-      onTogglePlay={() => setIsPlaying(!isPlaying)}
-      onReset={handleReset}
-      onNext={handleNext}
-      onPrev={handlePrev}
-      erasureRate={erasureRate}
-      setErasureRate={setErasureRate}
-      currentStep={currentStepIndex}
-      totalSteps={activeScenario.totalSteps}
-      isLiveMode={isLiveMode}
-      onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
-      apiKey={apiKey}
-      setApiKey={setApiKey}
-      onInitSession={handleInitSession}
+
       isComparisonMode={isComparisonMode}
       onToggleComparisonMode={() => setIsComparisonMode(!isComparisonMode)}
       liveStats={liveStats}
       currentScenario={activeScenario}
       onNew={handleNewConversation}
-      onSave={() => setIsSaveModalOpen(true)}
+
       onRefreshHistory={refreshScenarios}
       onDeleteScenario={deleteScenario}
       setIsHistoryViewOpen={setIsHistoryViewOpen}
@@ -331,8 +302,9 @@ function AppContent() {
             onStart={handleStart}
             initialScenarioId={activeScenarioId}
             initialErasureRate={erasureRate}
-            isLiveMode={isLiveMode}
-            onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
+
+            // isLiveMode={isLiveMode}
+            // onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
             apiKey={apiKey}
             setApiKey={setApiKey}
           />
@@ -345,11 +317,7 @@ function AppContent() {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="h-screen overflow-hidden"
           >
-            {viewMode === 'book_demo' ? (
-              <BookDemo onBack={() => {
-                setHasStarted(false);
-              }} />
-            ) : isComparisonMode ? (
+            {isComparisonMode ? (
               // Comparison Mode Layout
               <div className="h-full p-4 grid grid-cols-[340px_1fr] gap-6 overflow-hidden max-w-[1920px] mx-auto">
                 <div className="h-full overflow-hidden">
@@ -406,8 +374,9 @@ function AppContent() {
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        isLiveMode={isLiveMode}
-        onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
+
+        // isLiveMode={isLiveMode}
+        // onToggleLiveMode={() => setIsLiveMode(!isLiveMode)}
         apiKey={apiKey}
         setApiKey={setApiKey}
         customQuery={customQuery}
@@ -433,6 +402,7 @@ function AppContent() {
         onClose={() => setIsEvaluationModalOpen(false)}
         result={evaluationResult}
         isLoading={isEvaluating}
+        onReEvaluate={() => evaluateSession(locale, true)}
       />
 
       {/* 新手引导 */}

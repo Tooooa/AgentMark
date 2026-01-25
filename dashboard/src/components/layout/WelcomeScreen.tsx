@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Box, Cpu, Plus, Search, Zap, BookOpen } from 'lucide-react';
+import { ArrowRight, Box, Cpu, Plus, Search } from 'lucide-react';
 import { useI18n } from '../../i18n/I18nContext';
 
 
@@ -8,11 +8,12 @@ import { scenarios as presetScenarios } from '../../data/mockData';
 import type { Trajectory } from '../../types';
 
 interface WelcomeScreenProps {
-    onStart: (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; mode?: 'dashboard' | 'book_demo'; agentRepoUrl?: string }) => void;
+    onStart: (config: { scenarioId: string; payload: string; erasureRate: number; query?: string; agentRepoUrl?: string }) => void;
     initialScenarioId: string;
     initialErasureRate: number;
-    isLiveMode: boolean;
-    onToggleLiveMode: () => void;
+
+    // isLiveMode: boolean;
+    // onToggleLiveMode: () => void;
     apiKey: string;
     setApiKey: (key: string) => void;
 }
@@ -22,8 +23,9 @@ type Mode = 'tool' | 'self' | 'add' | null;
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
     onStart,
     initialErasureRate,
-    isLiveMode,
-    onToggleLiveMode,
+
+    // isLiveMode,
+    // onToggleLiveMode,
     apiKey,
     setApiKey
 }) => {
@@ -100,25 +102,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                 <div className="absolute top-[40%] -right-[10%] w-[40%] h-[60%] bg-blue-200/20 rounded-full blur-3xl" />
             </div>
 
-            {/* 3D Book Entry Button */}
-            <button
-                onClick={() => onStart({
-                    scenarioId: '',
-                    payload: payload,
-                    erasureRate: initialErasureRate,
-                    mode: 'book_demo'
-                })}
-                className="absolute top-8 left-8 z-50 flex items-center gap-3 px-5 py-3 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 hover:bg-white text-indigo-600 transition-all duration-300 group border border-white/50"
-            >
-                <div className="p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                    <BookOpen size={20} className="text-indigo-600" />
-                </div>
-                <div className="flex flex-col items-start">
-                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">New Feature</span>
-                    <span className="text-sm font-bold text-slate-700">3D Book Demo</span>
-                </div>
-                <ArrowRight size={16} className="text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all ml-2" />
-            </button>
+
 
             {/* Main Container */}
             <div className="w-full max-w-7xl flex items-center justify-between gap-8 relative z-10 h-[800px]">
@@ -325,7 +309,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                 {/* Footer */}
                                                 <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
                                                     <div className="flex gap-2 bg-slate-100 p-1.5 rounded-xl">
-                                                        <button
+                                                        {/* Simulation / Live Toggle Removed */}
+                                                        {/* <button
                                                             onClick={(e) => { e.stopPropagation(); isLiveMode && onToggleLiveMode(); }}
                                                             className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${!isLiveMode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                                         >
@@ -336,7 +321,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                             className={`flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${isLiveMode ? 'bg-rose-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                                                         >
                                                             <Zap size={16} fill="currentColor" /> Live
-                                                        </button>
+                                                        </button> */}
                                                     </div>
 
                                                     <button

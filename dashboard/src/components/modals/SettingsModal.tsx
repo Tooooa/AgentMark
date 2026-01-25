@@ -6,8 +6,9 @@ import { useI18n } from '../../i18n/I18nContext';
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    isLiveMode: boolean;
-    onToggleLiveMode: () => void;
+
+    // isLiveMode: boolean;
+    // onToggleLiveMode: () => void;
     apiKey: string;
     setApiKey: (key: string) => void;
     customQuery: string;
@@ -21,8 +22,9 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({
     isOpen,
     onClose,
-    isLiveMode,
-    onToggleLiveMode,
+
+    // isLiveMode,
+    // onToggleLiveMode,
     apiKey,
     setApiKey,
     customQuery,
@@ -60,7 +62,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const handleApply = () => {
         // 只有在实时模式且有自定义查询内容时才初始化会话
-        if (onInitSession && isLiveMode && customQuery.trim()) {
+        if (onInitSession && customQuery.trim()) {
             onInitSession();
         }
         onClose();
@@ -107,11 +109,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                             {locale === 'zh' ? '设置' : 'Settings'}
                                         </h2>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${isLiveMode ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
-                                                }`}>
-                                                {isLiveMode
-                                                    ? (locale === 'zh' ? '实时模式' : 'Live Mode')
-                                                    : (locale === 'zh' ? '模拟' : 'Simulation')}
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-green-100 text-green-700`}>
+                                                {locale === 'zh' ? '实时模式' : 'Live Mode'}
                                             </span>
                                             <span className="text-xs text-slate-400 font-mono">
                                                 {new Date().toLocaleTimeString()}
@@ -143,57 +142,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 </div>
 
                                 <div className="space-y-6">
-                                    {/* Mode Switcher */}
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                                            {locale === 'zh' ? '运行模式' : 'Runtime Mode'}
-                                        </label>
-                                        <div className="flex gap-3 p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
-                                            <button
-                                                onClick={() => isLiveMode && onToggleLiveMode()}
-                                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${!isLiveMode
-                                                    ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
-                                                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'
-                                                    }`}
-                                            >
-                                                {locale === 'zh' ? '模拟' : 'Simulation'}
-                                            </button>
-                                            <button
-                                                onClick={() => !isLiveMode && onToggleLiveMode()}
-                                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${isLiveMode
-                                                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                                                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'
-                                                    }`}
-                                            >
-                                                <Zap size={16} fill="currentColor" /> {locale === 'zh' ? '实时模式' : 'Live Mode'}
-                                            </button>
-                                        </div>
-                                    </div>
+
 
                                     {/* API Key */}
-                                    {isLiveMode && (
-                                        <div>
-                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                                                {locale === 'zh' ? 'DeepSeek API 密钥' : 'DeepSeek API Key'}
-                                            </label>
-                                            <div className="relative group">
-                                                <input
-                                                    type="password"
-                                                    value={apiKey}
-                                                    onChange={(e) => setApiKey(e.target.value)}
-                                                    placeholder="sk-..."
-                                                    className="w-full pl-4 pr-4 py-3.5 bg-slate-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-indigo-100 focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-sm font-mono text-slate-600 placeholder:text-slate-300"
-                                                />
-                                            </div>
-                                            <div className="mt-2 text-xs text-slate-400 leading-relaxed">
-                                                {locale === 'zh'
-                                                    ? '留空则用 .env 的 DEEPSEEK_API_KEY。'
-                                                    : 'Empty uses .env DEEPSEEK_API_KEY.'}
-                                            </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                            {locale === 'zh' ? 'DeepSeek API 密钥' : 'DeepSeek API Key'}
+                                        </label>
+                                        <div className="relative group">
+                                            <input
+                                                type="password"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
+                                                placeholder="sk-..."
+                                                className="w-full pl-4 pr-4 py-3.5 bg-slate-50 rounded-2xl border-2 border-transparent focus:bg-white focus:border-indigo-100 focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-sm font-mono text-slate-600 placeholder:text-slate-300"
+                                            />
                                         </div>
-                                    )}
+                                        <div className="mt-2 text-xs text-slate-400 leading-relaxed">
+                                            {locale === 'zh'
+                                                ? '留空则用 .env 的 DEEPSEEK_API_KEY。'
+                                                : 'Empty uses .env DEEPSEEK_API_KEY.'}
+                                        </div>
+                                    </div>
 
                                     {/* Payload */}
                                     <div>

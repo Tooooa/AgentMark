@@ -1,8 +1,0 @@
-repos:
-  - repo: https://github.com/hhatto/autopep8
-    rev: v2.1.0
-    hooks:
-      - id: autopep8
-        args:
-          - --in-place
-          - --aggressive
