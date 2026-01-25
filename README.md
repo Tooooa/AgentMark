@@ -3,7 +3,7 @@
   <img src="assets/logo.svg" width="120" alt="AgentMark Logo" style="display: inline-block; vertical-align: middle; margin-right: 20px;"/>
   <img src="assets/logo-text.svg" width="300" alt="AgentMark" style="display: inline-block; vertical-align: middle;"/>
   
-  **Behavioral Watermarking Framework for LLM Agents**
+  **LLM Agent Copyright Protection & Provenance Watermarking Framework**
 
   [简体中文](README_zh.md) | [English](README.md)
 
@@ -26,9 +26,43 @@ The project provides a reproducible, modular, and extensible codebase to evaluat
   <img src="assets/framework.png" width="100%" alt="AgentMark Framework"/>
 </div>
 
+<h3 align="center">📷 Interface Preview</h3>
+
+<div align="center">
+
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <strong>🤖 Platform Homepage</strong><br>
+      <img src="assets/homepage.gif" width="100%" alt="Platform Homepage"><br>
+      Quick access and task management
+    </td>
+    <td align="center" width="50%">
+      <strong>⚔️ Watermark Comparison Mode</strong><br>
+      <img src="assets/comparison_mode.gif" width="100%" alt="Watermark Comparison Mode"><br>
+      Compare behavior between watermarked and non-watermarked agents
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>📄 Real-time Logs</strong><br>
+      <img src="assets/execution_trace.gif" width="100%" alt="Real-time Logs"><br>
+      View agent reasoning and execution process in real-time
+    </td>
+    <td align="center" width="50%">
+      <strong>🛡️ Robustness Verification</strong><br>
+      <img src="assets/log_loss_robustness.gif" width="100%" alt="Robustness Verification"><br>
+      Simulate log loss to verify watermark decoding
+    </td>
+  </tr>
+</table>
+
+</div>
+
 ### ✨ Key Features
 - **💎 Utility Preservation**: Strict distribution-preserving sampling keeps watermarked behavior statistically indistinguishable from the original.
 - **🛡️ Robustness**: Erasure-resilient coding and context-bound randomness handle missing logs and truncated trajectories.
+- **🔢 Multi-bit Capacity**: Supports embedding multi-bit information in a single trajectory for precise ownership attribution and provenance.
 - **🌍 Multi-environment Support**: Covers tool use, embodied intelligence, and social simulations.
 
 ### 🎮 Supported Environments
@@ -39,19 +73,20 @@ The project provides a reproducible, modular, and extensible codebase to evaluat
 ---
 
 ## 📖 Table of Contents
-- [Project Structure](#-project-structure)
-- [Quick Start](#-quick-start)
-  - [1. Environment Setup](#1-️-environment-setup)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+  - [1. Environment Setup](#1-environment-setup)
   - [2. Environment Variables](#2-environment-variables)
-  - [3. Dataset Preparation](#3-dataset-preparation)
-  - [4. Dashboard Visualization](#4-dashboard-visualization)
-- [Using Our Plugin](#-using-our-plugin)
-- [Experiment Guide](#-experiment-guide)
+  - [3. Dashboard Visualization](#3-dashboard-visualization)
+  - [4. Docker Deployment](#4-docker-deployment)
+  - [5. Plug-and-Play One-click Watermarking](#5-plug-and-play-one-click-watermarking)
+- [Experiment Guide](#experiment-guide)
   - [1. ToolBench Tool Calling Experiment](#1-toolbench-tool-calling-experiment)
   - [2. ALFWorld Embodied Intelligence Experiment](#2-alfworld-embodied-intelligence-experiment)
   - [3. Oasis Social Media Experiment](#3-oasis-social-media-experiment)
   - [4. RLNC Robustness Evaluation](#4-rlnc-robustness-evaluation)
   - [5. Semantic Rewriting Robustness Evaluation](#5-semantic-rewriting-robustness-evaluation)
+- [Citation](#citation)
 - [License](#license)
 ---
 
@@ -60,35 +95,28 @@ The project provides a reproducible, modular, and extensible codebase to evaluat
 ```text
 AgentMark/
 ├── assets/                         # Project assets (images, PDF)
-├── agentmark/                      # Core library: watermark algorithms
+├── agentmark/                      # Core library: watermark algorithms & SDK
 │   ├── core/                       # Core watermark logic (ECC, sampling)
 │   ├── environments/               # Environment adapters (ToolBench, ALFWorld)
-│   └── data/                       # Bitstreams and configuration data
+│   ├── data/                       # Bitstreams and configuration data
+│   ├── proxy/                      # Gateway proxy for tool-use interception
+│   └── sdk/                        # Client SDK for easy integration
+├── dashboard/                      # Visualization Dashboard (Full-stack)
+│   ├── server/                     # Backend server (FastAPI)
+│   └── src/                        # Frontend source (React/Vite)
 ├── experiments/                    # Experimental implementations
 │   ├── toolbench/                  # ToolBench API tool-use experiments
-│   │   ├── scripts/                # Pipeline and analysis scripts
-│   │   ├── configs/                # Pipeline config files
-│   │   ├── tools/                  # Evaluation tools (StableToolBench)
-│   │   ├── MarkLLM/                # SynthID watermark library (local mode)
 │   ├── alfworld/                   # ALFWorld embodied intelligence experiments
-│   │   ├── scripts/                # Experiment and analysis scripts
-│   │   └── configs/                # Config files
-│   ├── oasis_watermark/            # Social-media experiments
-│   │   ├── twitter_watermark_experiment/  # Twitter simulation
-│   │   ├── reddit_watermark_experiment/   # Reddit simulation
-│   │   └── oasis/                  # Modified Oasis framework
+│   ├── oasis_watermark/            # Social-media experiments (Twitter/Reddit)
 │   ├── rlnc_trajectory/            # RLNC robustness evaluation
-│   │   ├── scripts/                # Erasure eval and FPR analysis
-│   │   └── *.json                  # Config files
 │   └── semantic_rewriting/         # Semantic rewriting robustness tests
-│       ├── scripts/                # Robustness test scripts
-│       └── data/                   # Sample task data
-├── output/                         # Logs, predictions, analysis outputs
+├── output/                         # Experiment outputs (logs, predictions)
 ├── environment.yml                 # Conda environment (Python 3.9)
 ├── requirements.txt                # Python dependencies (pip)
 ├── .env.example                    # Environment variable template
 ├── LICENSE                         # MIT License
-└── README.md                       # English README
+├── README.md                       # English README
+└── README_zh.md                    # Chinese README
 ```
 
 ## 🚀 Quick Start
@@ -120,199 +148,109 @@ vim .env
 export $(grep -v '^#' .env | xargs)
 ```
 
-### 3. Dataset Preparation
 
-#### ToolBench
-
-> [!IMPORTANT]
-> **ToolBench dataset is required!** You must complete the steps below before running ToolBench experiments.
-
-**Download steps:**
-
-1. **Download the ToolBench dataset**
-   
-   From the [ToolBench repository](https://github.com/OpenBMB/ToolBench), download the full dataset including:
-   - `queries`: test query tasks
-   - `tools`: API tool definitions (16,000+ tools)
-   - `reference answers`: evaluation references
-
-   ```bash
-   # Recommended: use Git LFS or download from Releases
-   # Dataset size ~2-3 GB
-   ```
-
-2. **Place into the correct directory**
-   
-   Put the extracted `data` folder under `experiments/toolbench/data/`:
-   
-   ```bash
-   # Expected structure
-   AgentMark/
-   └── experiments/
-       └── toolbench/
-           └── data/
-               └── data/           # extracted data folder
-                   ├── test_query/
-                   ├── toolenv/
-                   │   └── tools/  # tool JSON definitions
-                   └── answer/
-   ```
-
-3. **Verify dataset**
-   
-   Make sure `experiments/toolbench/data/data/toolenv/tools` contains multiple category subfolders (e.g., `Search/`, `Social_Media/`) and JSON tool files inside.
-
-#### ALFWorld
-
-The dataset is downloaded automatically to `~/.cache/alfworld`, or run manually:
-
-```bash
-alfworld-download
-```
-
-`experiments/alfworld/configs/base_config.yaml` is preconfigured to `/root/.cache/alfworld`.
-
-> [!NOTE]
-> Oasis (social media) experiments require a separate environment (Python 3.10+). Please refer to the [Oasis Social Media Experiments](#3-oasis-social-media-experiments) section below.
-
-### 4. Dashboard Visualization
+### 3. Dashboard Visualization
 
 The dashboard provides interactive watermark experiments with real-time comparison and decoding analysis.
 
-#### Requirements
-- **Node.js**: 18.0+ (LTS recommended)
-- **NPM**: comes with Node.js
-- **Python**: backend runs in AgentMark environment
+#### 📦 Download Retriever Cache (Required)
 
-#### Steps
+Since ToolBench API retrieval requires loading cache files, we recommend downloading the pre-built cache to skip the time-consuming indexing process. **This is required for running the frontend.**
 
-**Step 1: Start backend**
+1. **Download file**: Download `retriever_cache.zip` from [GitHub Releases](https://github.com/Tooooa/AgentMark/releases).
+2. **Extract file**:
+   ```bash
+   # Navigate to project root
+   cd AgentMark
+   # Extract retriever cache to the specified directory
+   unzip -o retriever_cache.zip -d experiments/toolbench/data/data/toolenv/tools
+   ```
 
-```bash
-# Ensure you are in the project root
-conda activate AgentMark
-python dashboard/server/app.py
-```
+#### 🚀 Steps
 
-When you see `Uvicorn running on http://0.0.0.0:8000`, the backend is running.
-
-> **Note**: backend listens on port **8000** by default.
-
-**Step 2: Start frontend**
-
-```bash
-cd dashboard
-npm install  # first time only
-npm run dev
-```
-
-You will see a local URL, typically: `http://localhost:5173`
-
-**Step 3: Open the app**
-
-Visit `http://localhost:5173` or `http://127.0.0.1:5173` in your browser.
-
-#### Common Issues
-
-- **Port in use**: if 8000 or 5173 is occupied, stop the conflicting process or change config (frontend: `dashboard/vite.config.ts`, backend: `dashboard/server/app.py`).
-- **Missing dependency**: if you see `ModuleNotFoundError`, install the missing package with `pip install <package>`.
+1. **Requirements**: Node.js 18.0+, NPM, Python (AgentMark environment).
+2. **Start Backend**:
+   ```bash
+   conda activate AgentMark
+   python dashboard/server/app.py
+   ```
+3. **Start Frontend**:
+   ```bash
+   cd dashboard
+   npm install && npm run dev
+   ```
+4. **Access**: Open `http://localhost:5173` in your browser.
 
 ---
 
-## ✅ Using Our Plugin
+### 4. 🐳 Docker Deployment
 
-This flow validates the "tool calling + watermark sampling" plugin route: external agents don't modify business code, only change the endpoint address (OPENAI_BASE_URL).
+We provide a Docker-based environment for both running the Web App and executing experiments with zero configuration.
 
-**Workflow**: **User input (Add Agent mode) → Gateway performs watermark sampling → Tool calls executed**.
+#### Prerequisites
+1. Install Docker and Docker Compose.
+2. Create a `.env` file in the root directory with your API keys:
+   ```bash
+   cp .env.example .env
+   # Edit .env and fill in OPENAI_API_KEY
+   ```
 
-### Step 1: Start Gateway Proxy (AgentMark Proxy)
+#### Usage Scenarios
 
-Open Terminal 1:
-
-**Linux/macOS:**
+**Scenario A: Web Application** (Frontend + Backend)
+One command to start the full stack:
 ```bash
-cd AgentMark
-source ~/miniconda3/etc/profile.d/conda.sh && conda activate AgentMark
+docker-compose up -d backend frontend
+```
+- Access Dashboard at: `http://localhost:8080`
 
+**Scenario B: Running Experiments**
+Start an interactive experiment environment (with auto-downloaded datasets):
+```bash
+# Start container
+docker-compose up -d experiments
+# Enter shell
+docker-compose exec experiments bash
+```
+
+#### One-Line Deployment (Production)
+For quick deployment using pre-built images:
+```bash
+curl -fL https://raw.githubusercontent.com/Tooooa/AgentMark/main/docker-compose.prod.yml -o docker-compose.yml
+docker-compose up -d
+```
+
+---
+
+### 5. Plug-and-Play One-click Watermarking
+
+Gain behavioral watermarking capabilities with zero code changes. By simply pointing your existing Agent's API Base URL to the gateway address, you can instantly enable watermarking. This mode is designed for developers to quickly add copyright protection and provenance to existing Agent systems without modifying core logic.
+
+#### Step 1: Start Gateway Proxy (AgentMark Proxy)
+
+```bash
+conda activate AgentMark
 export DEEPSEEK_API_KEY=sk-your-key
 export TARGET_LLM_MODEL=deepseek-chat
-export AGENTMARK_DEBUG=1
-export AGENTMARK_TOOL_MODE=proxy   # Use "proxy constructs tool_calls" plugin mode
-
+export AGENTMARK_TOOL_MODE=proxy
 uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
 ```
 
-**Windows PowerShell:**
-```powershell
-cd AgentMark
-conda activate AgentMark
-
-$env:DEEPSEEK_API_KEY="sk-your-key"
-$env:TARGET_LLM_MODEL="deepseek-chat"
-$env:AGENTMARK_DEBUG="1"
-$env:AGENTMARK_TOOL_MODE="proxy"
-
-uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
-```
-
-### Step 2: Start Dashboard Backend
-
-Open Terminal 2:
+#### Step 2: Start Backend Service
 
 ```bash
-cd AgentMark
 conda activate AgentMark
 python dashboard/server/app.py
 ```
 
-### Step 3: Start Frontend (Visualization Dashboard)
+#### Step 3: Verify Watermark Injection
 
-Open Terminal 3:
-
-```bash
-cd AgentMark
-cd dashboard
-npm install  # Only needed first time
-npm i @react-three/fiber @react-three/drei three
-npm run dev
-```
-
-Browser access: `http://localhost:5173`
-
-You can view sessions and watermark visualizations on the frontend.
-
-### Step 4: Use Add Agent Mode in the Dashboard
-
-- Open the dashboard in your browser.
-- Select **Add Agent** on the welcome screen.
-- Fill in your API key (DeepSeek/OpenAI) and optional repo URL, then send a message.
-
-### Step 5: Verify Watermark Injection
-
-In the **gateway proxy terminal** you should see:
-
+Observe real-time logs in the **gateway proxy terminal**:
 - `[agentmark:scoring_request]`: Scoring instruction injection
-- `[agentmark:tool_calls_proxy]`: Gateway-constructed tool calls (with parameters)
+- `[agentmark:tool_calls_proxy]`: Gateway-constructed tool calls
 - `[watermark]`: Watermark results and visualization data
 
-In the **frontend dashboard** you can:
-- View current session and conversation history
-- Visualize watermark distribution and statistics
-- Analyze watermark decoding results
-
-> **Note**: The gateway extracts candidate tools from the request's `tools` parameter and performs watermark sampling selection.
-
-### Troubleshooting
-
-- **502 Bad Gateway Error**:
-  If you encounter `502 Bad Gateway` when calling the API, it is often caused by a global proxy configuration (e.g., `http_proxy`) interfering with localhost connections.
-  
-  **Fix**: set `no_proxy` when starting the services to ensure local traffic bypasses the proxy.
-
-  ```bash
-  export no_proxy=localhost,127.0.0.1,0.0.0.0
-  # Then restart the proxy and backend
-  ```
+> **Note**: If you encounter `502 Bad Gateway`, run `export no_proxy=localhost,127.0.0.1,0.0.0.0`.
 
 ---
 
@@ -322,6 +260,21 @@ Detailed experimental guides are as follows:
 
 ### 1. ToolBench Tool Calling Experiment
 - **Overview**: Simulates real-world API calling scenarios to evaluate watermark impact on tool usage and robustness.
+
+#### 📊 Dataset Preparation (Required)
+
+You must complete these steps before running ToolBench experiments:
+
+1. **Download Dataset**: From the [ToolBench repository](https://github.com/OpenBMB/ToolBench), download the full dataset (~2-3 GB).
+2. **Directory Config**: Place extracted `data` under `experiments/toolbench/data/`. Ensure structure:
+   ```text
+   experiments/toolbench/data/data/
+   ├── test_query/
+   ├── toolenv/tools/  # JSON definitions
+   └── answer/
+   ```
+
+#### 🚀 Running Modes
 - **Directory**: `experiments/toolbench/`
 - **Two Running Modes**:
   | Mode | Config (`use_local_model`) | Description |
@@ -340,6 +293,15 @@ Detailed experimental guides are as follows:
 
 ### 2. ALFWorld Embodied Intelligence Experiment
 - **Overview**: Text-based interactive household decision tasks, evaluating watermark impact on agent planning and execution.
+
+#### 📊 Dataset Preparation
+Datasets are downloaded automatically to `~/.cache/alfworld`, or run manually:
+```bash
+alfworld-download
+```
+Preconfigured in `experiments/alfworld/configs/base_config.yaml`.
+
+#### 🚀 Running Guide
 - **Directory**: `experiments/alfworld/`
 - **Environment Install**:
   ```bash
@@ -428,3 +390,22 @@ Detailed experimental guides are as follows:
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 📄 Citation
+
+If you use this project in your research, please cite our paper:
+
+```bibtex
+@misc{agentmark2025,
+      title={Agent Mark: Provable Multi-bit Watermarking for LLM Agents}, 
+      author={Zehan Qi and Guoqiang Jin and Xin Gao and Yibo Zhu and Zhaofeng He},
+      year={2025},
+      eprint={2601.03294},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR},
+      url={https://arxiv.org/abs/2601.03294}, 
+}
+```
+

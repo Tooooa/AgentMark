@@ -3,7 +3,7 @@
   <img src="assets/logo.svg" width="120" alt="AgentMark Logo" style="display: inline-block; vertical-align: middle; margin-right: 20px;"/>
   <img src="assets/logo-text.svg" width="300" alt="AgentMark" style="display: inline-block; vertical-align: middle;"/>
   
-  **LLM Agent 行为水印实验框架**
+  **LLM Agent 版权保护与溯源水印框架**
 
   [简体中文](README_zh.md) | [English](README.md)
 
@@ -26,9 +26,44 @@
   <img src="assets/framework_zh.png" width="100%" alt="AgentMark Framework"/>
 </div>
 
+
+<h3 align="center">📷 界面预览</h3>
+
+<div align="center">
+
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <strong>🤖 平台首页</strong><br>
+      <img src="assets/homepage.gif" width="100%" alt="平台首页"><br>
+      快速接入与任务管理
+    </td>
+    <td align="center" width="50%">
+      <strong>⚔️ 水印对比模式</strong><br>
+      <img src="assets/comparison_mode.gif" width="100%" alt="水印对比模式"><br>
+      对比有无水印 Agent 的行为差异
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <strong>📄 实时日志</strong><br>
+      <img src="assets/execution_trace.gif" width="100%" alt="实时日志"><br>
+      实时查看 Agent 思考与执行过程
+    </td>
+    <td align="center" width="50%">
+      <strong>🛡️ 鲁棒性验证</strong><br>
+      <img src="assets/log_loss_robustness.gif" width="100%" alt="鲁棒性验证"><br>
+      模拟日志丢失场景下的水印解码验证
+    </td>
+  </tr>
+</table>
+
+</div>
+
 ### ✨ 主要特性：
 - **💎 效用保持 (Utility Preservation)**: 通过严格的分布保留采样，确保加水印后的 Agent 行为分布与原始分布统计不可区分。
 - **🛡️ 高鲁棒性 (Robustness)**: 采用抗擦除编码（Erasure-Resilient Coding）和环境上下文绑定的随机性，能有效应对日志缺失（Missing Logs）和轨迹截断（Trajectory Truncation）。
+- **🔢 多比特容量 (Multi-bit Capacity)**: 支持在单条轨迹中嵌入多比特信息，实现精确的版权归属与溯源。
 - **🌍 多环境支持**: 覆盖工具使用、具身智能及社交模拟等多种场景。
 
 ### 🎮 支持的实验环境：
@@ -41,17 +76,18 @@
 ## 📖 目录
 - [项目结构](#-项目结构)
 - [快速开始](#-快速开始)
-  - [1. 环境配置](#1-️-环境配置)
+  - [1. 环境配置](#1-环境配置)
   - [2. 环境变量配置](#2-环境变量配置)
-  - [3. 数据集准备](#3-数据集准备)
-  - [4. Dashboard 可视化界面](#4-dashboard-可视化界面)
-- [使用我们的插件](#-使用我们的插件)
+  - [3. Dashboard 可视化](#3-dashboard-可视化)
+  - [4. Docker 部署](#4-docker-部署)
+  - [5. 插件式一键加水印](#5-插件式一键加水印)
 - [实验指南](#-实验指南)
   - [1. ToolBench 工具调用实验](#1-toolbench-工具调用实验)
-  - [2. ALFWorld 具身智能实验](#2-alfworld-具身智能实验)
+  - [2. ALFWorld 具身智能实验](#2-alfworld-具身体能实验)
   - [3. Oasis 社交媒体实验](#3-oasis-社交媒体实验)
   - [4. RLNC 鲁棒性评测](#4-rlnc-鲁棒性评测)
   - [5. 语义重写鲁棒性评测](#5-语义重写鲁棒性评测)
+- [引用](#-引用)
 - [License](#license)
 ---
 
@@ -60,35 +96,28 @@
 ```text
 AgentMark/
 ├── assets/                         # 项目资源 (图片, PDF)
-├── agentmark/                      # 核心库：水印算法实现
+├── agentmark/                      # 核心库：水印算法实现与 SDK
 │   ├── core/                       # 核心水印逻辑 (ECC, 采样)
 │   ├── environments/               # 环境适配器 (ToolBench, ALFWorld)
-│   └── data/                       # 比特流和配置数据
+│   ├── data/                       # 比特流和配置数据
+│   ├── proxy/                      # 网关代理 (用于拦截工具调用)
+│   └── sdk/                        # 客户端 SDK (便于集成)
+├── dashboard/                      # 可视化仪表盘 (全栈)
+│   ├── server/                     # 后端服务 (FastAPI)
+│   └── src/                        # 前端源码 (React/Vite)
 ├── experiments/                    # 实验实现
 │   ├── toolbench/                  # ToolBench API 工具调用实验
-│   │   ├── scripts/                # 流水线和分析脚本
-│   │   ├── configs/                # 流水线配置文件
-│   │   ├── tools/                  # 评测工具 (StableToolBench)
-│   │   ├── MarkLLM/                # SynthID 水印库 (本地模式)
 │   ├── alfworld/                   # ALFWorld 具身智能实验
-│   │   ├── scripts/                # 实验和分析脚本
-│   │   └── configs/                # 配置文件
-│   ├── oasis_watermark/            # 社交媒体实验
-│   │   ├── twitter_watermark_experiment/  # Twitter 模拟
-│   │   ├── reddit_watermark_experiment/   # Reddit 模拟
-│   │   └── oasis/                  # 修改后的 Oasis 框架
+│   ├── oasis_watermark/            # 社交媒体实验 (Twitter/Reddit)
 │   ├── rlnc_trajectory/            # RLNC 鲁棒性评测
-│   │   ├── scripts/                # 擦除评测和 FPR 分析
-│   │   └── *.json                  # 配置文件
 │   └── semantic_rewriting/         # 语义重写鲁棒性测试
-│       ├── scripts/                # 鲁棒性测试脚本
-│       └── data/                   # 示例任务数据
-├── output/                     # 实验生成的日志、预测答案和分析结果
+├── output/                         # 实验输出 (日志, 预测结果)
 ├── environment.yml                 # Conda 环境配置 (Python 3.9)
 ├── requirements.txt                # Python 依赖 (pip)
 ├── .env.example                    # 环境变量模板
 ├── LICENSE                         # MIT License
-└── README.md                       # English README
+├── README.md                       # English README
+└── README_zh.md                    # Chinese README
 ```
 
 ## 🚀 快速开始
@@ -120,191 +149,109 @@ vim .env
 export $(grep -v '^#' .env | xargs)
 ```
 
-### 3. 数据集准备
 
-#### ToolBench
+### 3. Dashboard 可视化
 
-> [!IMPORTANT]
-> **ToolBench 数据集是必需的！** 运行 ToolBench 实验前必须完成以下步骤，否则会因缺少工具定义和测试查询而无法运行。
+Dashboard 提供了交互式的水印实验界面，包含实时对比、解码分析等功能。
 
-**下载步骤：**
+#### 📦 下载检索缓存 (必需)
 
-1. **下载 ToolBench 数据集**
-   
-   从 [ToolBench 官方仓库](https://github.com/OpenBMB/ToolBench) 下载完整数据集，包含：
-   - `queries`: 测试查询任务
-   - `tools`: 工具 API 定义 (约 16,000+ 个工具)
-   - `reference answers`: 参考答案 (用于评测)
+由于 ToolBench API 检索需要加载缓存文件，为了免去长时间的索引构建过程，运行前端前**必须**下载预处理好的缓存文件。
 
-   ```bash
-   # 推荐使用 Git LFS 或从 Release 页面直接下载
-   # 数据集大小约 2-3 GB
-   ```
-
-2. **放置到正确目录**
-   
-   将解压后的 `data` 文件夹放入 `experiments/toolbench/data/` 目录下：
-   
-   ```bash
-   # 预期的目录结构
-   AgentMark/
-   └── experiments/
-       └── toolbench/
-           └── data/
-               └── data/           # 解压后的数据文件夹
-                   ├── test_query/
-                   ├── toolenv/
-                   │   └── tools/  # 包含所有工具 JSON 定义
-                   └── answer/
-   ```
-
-3. **验证数据集**
-   
-   确认 `experiments/toolbench/data/data/toolenv/tools` 目录下包含多个分类子目录（如 `Search/`, `Social_Media/` 等），每个分类下有工具的 JSON 文件。
-
-#### 4. (可选但推荐) 下载检索缓存
-
-由于 API 检索需要加载缓存文件，为了免去长时间的索引构建过程，建议下载预处理好的缓存文件。
-
-1. **下载文件**
-   
-   请从 **[在此处填入您的网盘或Release链接]** 下载 `retriever_cache.zip` 文件，并将其放置在项目根目录 `AgentMark/` 下。
-
-2. **解压文件**
-
+1. **下载文件**: 从 [GitHub Releases](https://github.com/Tooooa/AgentMark/releases) 下载 `retriever_cache.zip` 文件。
+2. **解压文件**:
    ```bash
    # 进入项目根目录
    cd AgentMark
-
    # 解压检索缓存到指定目录
    unzip -o retriever_cache.zip -d experiments/toolbench/data/data/toolenv/tools
    ```
 
-#### ALFWorld
-数据集在运行时会自动下载到 `~/.cache/alfworld`，或者您可以手动运行：
-```bash
-alfworld-download
-```
-`experiments/alfworld/configs/base_config.yaml` 中的配置已预设为指向 `/root/.cache/alfworld`。
-> [!NOTE]
-> Oasis (社交媒体) 实验需要独立的运行环境 (Python 3.10+)，请参考下方的 [Oasis 社交媒体实验](#3-oasis-社交媒体实验) 章节。
+#### 🚀 启动步骤
 
-
-### 4. Dashboard 可视化界面
-
-Dashboard 提供了交互式的水印实验界面，包含实时对比、解码分析等功能。
-
-#### 环境要求
-- **Node.js**: 18.0 或更高版本（推荐使用 LTS）
-- **NPM**: 通常随 Node.js 一起安装
-- **Python**: 后端需要 AgentMark 环境
-
-#### 启动步骤
-
-**步骤 1: 启动后端服务**
-
-打开一个终端窗口，运行：
-
-```bash
-# 确保在项目根目录
-conda activate AgentMark
-python dashboard/server/app.py
-```
-
-成功提示：当您看到 `Uvicorn running on http://0.0.0.0:8000` 时，说明后端已成功启动。
-
-> **注意**: 后端服务默认监听 **8000** 端口。
-
-**步骤 2: 启动前端界面**
-
-打开另一个终端窗口，运行：
-
-```bash
-cd dashboard
-npm install  # 仅首次需要
-npm run dev
-```
-
-终端会显示访问地址，通常为：`http://localhost:5173`
-
-**步骤 3: 访问应用**
-
-打开浏览器，访问 `http://localhost:5173` 或 `http://127.0.0.1:5173` 即可使用 AgentMark Dashboard。
-
-#### 常见问题
-
-- **端口被占用**: 如果 8000 或 5173 端口被占用，请检查是否有其他服务正在运行，或修改配置文件（前端: `dashboard/vite.config.ts`，后端: `dashboard/server/app.py`）。
-- **依赖缺失**: 如果启动后端时报错 `ModuleNotFoundError`，请使用 `pip install <缺少包名>` 安装。
+1. **环境要求**: Node.js 18.0+, NPM, Python (AgentMark 环境)。
+2. **启动后端**:
+   ```bash
+   conda activate AgentMark
+   python dashboard/server/app.py
+   ```
+3. **启动前端**:
+   ```bash
+   cd dashboard
+   npm install && npm run dev
+   ```
+4. **访问**: 浏览器打开 `http://localhost:5173`。
 
 ---
 
-## 🔌 使用我们的插件
+### 4. 🐳 Docker 部署
 
-该流程用于验证：**用户输入（Add Agent 模式） → 网关做水印采样 → 工具调用执行**。
+我们提供了完备的 Docker 环境，支持一键启动 Web 应用或无需配置直接运行实验脚本。
 
-### Step 1：启动网关代理（AgentMark Proxy）
+#### 准备工作
+1. 安装 Docker 和 Docker Compose。
+2. 在项目根目录创建 `.env` 文件并填入 API Key：
+   ```bash
+   cp .env.example .env
+   # 编辑 .env 填入您的 OPENAI_API_KEY / DEEPSEEK_API_KEY
+   ```
+
+#### 使用场景
+
+**场景 A: 启动 Web 可视化平台**
+一条命令启动前后端服务：
+```bash
+docker-compose up -d backend frontend
+```
+- 访问地址：`http://localhost:8080`
+
+**场景 B: 运行实验 (Experiment CLI)**
+启动一个配置好环境的交互式容器（支持数据集自动下载）：
+```bash
+# 启动容器
+docker-compose up -d experiments
+# 进入容器终端
+docker-compose exec experiments bash
+```
+
+#### 一行命令部署 (生产环境)
+使用预构建镜像进行快速部署：
+```bash
+curl -fL https://raw.githubusercontent.com/Tooooa/AgentMark/main/docker-compose.prod.yml -o docker-compose.yml
+docker-compose up -d
+```
+
+---
+
+### 5. 插件式一键加水印
+
+无需修改原有代码，只需将现有 Agent 的 API Base URL 指向网关地址，即可一键获得行为水印能力。这种模式特别适合开发者在不触动核心逻辑的情况下，快速为已有 Agent 系统增加版权保护与溯源功能。
+
+#### Step 1：启动网关代理（AgentMark Proxy）
 
 ```bash
-cd AgentMark
-source ~/miniconda3/etc/profile.d/conda.sh && conda activate AgentMark
-
+conda activate AgentMark
 export DEEPSEEK_API_KEY=sk-你的key
 export TARGET_LLM_MODEL=deepseek-chat
-export AGENTMARK_DEBUG=1
-export AGENTMARK_TOOL_MODE=proxy   # 网关构造 tool_calls
-
+export AGENTMARK_TOOL_MODE=proxy
 uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
 ```
 
-### Step 2：启动后端
+#### Step 2：启动后端服务
 
 ```bash
-cd AgentMark
 conda activate AgentMark
 python dashboard/server/app.py
 ```
 
-### Step 3：启动前端（可视化）
+#### Step 3：验证水印注入
 
-```bash
-cd AgentMark
-cd dashboard
-npm install
-npm i @react-three/fiber @react-three/drei three
-npm run dev
-```
-
-浏览器访问：`http://localhost:5173`
-
-### Step 4：在前端使用 Add Agent 模式
-
-- 打开浏览器进入 Dashboard。
-- 在欢迎页选择 **Add Agent** 模式。
-- 填入 API Key（DeepSeek/OpenAI）与可选的 Repo URL，然后发送消息。
-
-### Step 5：验证日志
-
-在 **网关代理终端** 可看到：
-
+在 **网关代理终端** 可看到实时日志：
 - `[agentmark:scoring_request]`：评分指令注入
-- `[agentmark:tool_calls_proxy]`：网关构造的工具调用（含参数）
+- `[agentmark:tool_calls_proxy]`：网关构造的工具调用
 - `[watermark]`：水印结果与可视化数据
 
-在 **前端** 可查看会话与水印分布可视化。
-
-> 说明：网关从请求的 `tools` 参数中抽取候选工具并进行水印采样。
-
-### 常见问题排查
-
-- **502 Bad Gateway Error**:
-  如果在调用 API 时遇到 `502 Bad Gateway` 错误，通常是由于系统全局代理配置（如 `http_proxy`）干扰了与 localhost 的连接。
-  
-  **解决方法**: 启动服务时设置 `no_proxy`，确保本地流量绕过代理。
-
-  ```bash
-  export no_proxy=localhost,127.0.0.1,0.0.0.0
-  # 然后重启 proxy 和 backend 服务
-  ```
+> **注意**: 如果遇到 `502 Bad Gateway`，请设置 `export no_proxy=localhost,127.0.0.1,0.0.0.0`。
 
 ---
 
@@ -314,6 +261,21 @@ npm run dev
 
 ### 1. ToolBench 工具调用实验
 - **简介**: 模拟真实世界 API 调用场景，评估水印对工具使用能力和鲁棒性的影响。
+
+#### 📊 数据集准备 (必需)
+
+运行 ToolBench 实验前必须完成以下步骤：
+
+1. **下载数据集**: 从 [ToolBench 官方仓库](https://github.com/OpenBMB/ToolBench) 下载完整数据集（含 queries, tools, reference answers，约 2-3 GB）。
+2. **目录配置**: 将解压后的 `data` 文件夹放入 `experiments/toolbench/data/` 目录下，确保结构如下：
+   ```text
+   experiments/toolbench/data/data/
+   ├── test_query/
+   ├── toolenv/tools/  # 包含所有工具分类 JSON
+   └── answer/
+   ```
+
+#### 🚀 运行模式
 - **目录**: `experiments/toolbench/`
 - **两种运行模式**:
   | 模式 | 配置项 (`use_local_model`) | 说明 |
@@ -332,6 +294,15 @@ npm run dev
 
 ### 2. ALFWorld 具身智能实验
 - **简介**: 基于文本的交互式家庭环境决策任务，评估水印对 Agent 规划与执行能力的影响。
+
+#### 📊 数据集准备
+数据集在运行时会自动下载到 `~/.cache/alfworld`，或手动运行：
+```bash
+alfworld-download
+```
+配置已预设在 `experiments/alfworld/configs/base_config.yaml`。
+
+#### 🚀 运行指南
 - **目录**: `experiments/alfworld/`
 - **环境安装**:
   ```bash
@@ -420,3 +391,22 @@ npm run dev
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 📄 引用
+
+如果您在研究中使用了本项目，请引用我们的论文：
+
+```bibtex
+@misc{agentmark2025,
+      title={Agent Mark: Provable Multi-bit Watermarking for LLM Agents}, 
+      author={Zehan Qi and Guoqiang Jin and Xin Gao and Yibo Zhu and Zhaofeng He},
+      year={2025},
+      eprint={2601.03294},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR},
+      url={https://arxiv.org/abs/2601.03294}, 
+}
+```
+

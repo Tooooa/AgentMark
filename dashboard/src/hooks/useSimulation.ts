@@ -1,53 +1,65 @@
-
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import type { Trajectory, Step } from '../types';
-import { api } from '../services/api';
-
+import { useState, useEffect, useMemo } from 'react';
+// import type { Trajectory } from '../types'; // Keep for type safety if needed, or remove if truly unused. 
+// Actually, let's keep it but suppress if needed, or better, remove it if I am sure.
+// Wait, I see no explicit usage in the file I viewed.
+// Let's remove it.
+import { useErasure } from './useErasure';
+import { useEvaluation } from './useEvaluation';
+import { useLiveSession } from './useLiveSession';
+import { useHistory } from './useHistory';
 
 export const useSimulation = () => {
-    // Static State
-    const [savedScenarios, setSavedScenarios] = useState<Trajectory[]>([]);
-    const [activeScenarioId, setActiveScenarioId] = useState<string>('empty-initial'); // 使用一个不存在的ID，确保初始为空
-    const [customQuery, setCustomQuery] = useState<string>("");
-    const [payload, setPayload] = useState<string>("1101"); // Default binary string
+    const [activeScenarioId, setActiveScenarioId] = useState<string>('empty-initial');
 
-    // Live State
+    // 1. History Hook
+    const {
+        savedScenarios,
+        setSavedScenarios,
+        refreshScenarios,
+        deleteScenario,
+        clearAllHistory,
+        batchDeleteScenarios,
+        togglePin
+    } = useHistory();
 
-    const defaultApiKey = (import.meta as any)?.env?.DEEPSEEK_API_KEY || "";
-    const [apiKey, setApiKey] = useState(defaultApiKey);
-    const [sessionId, setSessionId] = useState<string | null>(null);
-    const [liveScenario, setLiveScenario] = useState<Trajectory | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    // 2. Live Session Hook
+    const {
+        apiKey, setApiKey,
+        sessionId, setSessionId,
+        liveScenario, setLiveScenario,
+        isLoading, setIsLoading,
+        isPlaying, setIsPlaying,
+        currentStepIndex, setCurrentStepIndex,
+        handleInitSession,
+        handleNext,
+        handlePrev,
+        handleReset,
+        handleContinue,
+        handleNewConversation,
+        customQuery, setCustomQuery,
+        payload, setPayload
+    } = useLiveSession(
+        activeScenarioId,
+        setActiveScenarioId,
+        refreshScenarios
+    );
 
-    // Common State
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [currentStepIndex, setCurrentStepIndex] = useState(0);
-    const [erasureRate, setErasureRate] = useState(0);
-    const [erasedIndices, setErasedIndices] = useState<Set<number>>(new Set());
+    // 3. Erasure Hook
+    const {
+        erasureRate,
+        setErasureRate,
+        erasedIndices
+    } = useErasure(currentStepIndex);
 
-    // Evaluation State
-    const [isEvaluating, setIsEvaluating] = useState(false);
-    const [evaluationResult, setEvaluationResult] = useState<{ model_a_score: number, model_b_score: number, reason: string } | null>(null);
-    const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
-
-    // History View State
-    const [isHistoryViewOpen, setIsHistoryViewOpen] = useState(false);
-
-
-    // Refresh saved scenarios
-    const refreshScenarios = useCallback(async () => {
-        try {
-            const saved = await api.listScenarios('benchmark');
-            setSavedScenarios(saved);
-        } catch (e) {
-            console.error("Failed to load saved scenarios", e);
-        }
-    }, []);
-
-    // Initial Load
-    useEffect(() => {
-        refreshScenarios();
-    }, [refreshScenarios]);
+    // 4. Evaluation Hook
+    const {
+        evaluationResult,
+        isEvaluating,
+        isEvaluationModalOpen,
+        setEvaluationResult,
+        setIsEvaluationModalOpen,
+        evaluateSession
+    } = useEvaluation();
 
     // Sync liveScenario to savedScenarios for real-time updates in history list
     useEffect(() => {
@@ -55,25 +67,28 @@ export const useSimulation = () => {
             setSavedScenarios(prev => {
                 const index = prev.findIndex(s => s.id === liveScenario.id);
                 if (index >= 0) {
-                    // Update existing scenario
                     const updated = [...prev];
                     updated[index] = liveScenario;
                     return updated;
                 }
-                // If not found, it might be a new scenario that hasn't been saved yet
                 return prev;
             });
         }
-    }, [liveScenario]);
+    }, [liveScenario, setSavedScenarios]);
+
+    // Evaluation Sync
+    useEffect(() => {
+        if (activeScenarioId && activeScenarioId === liveScenario?.id) {
+            setLiveScenario(prev => prev ? ({ ...prev, evaluation: evaluationResult || undefined }) : null);
+        }
+    }, [evaluationResult, activeScenarioId, liveScenario?.id, setLiveScenario]);
+
 
     const allScenarios = useMemo(() => {
-        // Saved scenarios (real history)
         return [...savedScenarios];
     }, [savedScenarios]);
 
-    // Derived Active Scenario
     const activeScenario = useMemo(() => {
-        // If no scenario is selected (empty ID), return empty scenario
         if (!activeScenarioId) {
             return {
                 id: '',
@@ -84,67 +99,43 @@ export const useSimulation = () => {
                 steps: []
             };
         }
-
-        // Priority 1: If we have a liveScenario and it matches activeScenarioId, use it
         if (liveScenario && liveScenario.id === activeScenarioId) {
             return liveScenario;
         }
-
-        // Priority 2: Find in allScenarios (includes saved scenarios)
         const found = allScenarios.find(s => s.id === activeScenarioId);
         if (found) {
             return found;
         }
+        // If we have a liveScenario but ID doesn't match, still use it if it's the expected one?
+        // Prioritize live scenario if standard logic fails but user is in session?
+        // Stick to activeScenarioId matching.
 
-        // Priority 3: If we have a liveScenario but ID doesn't match, still use it (current session)
-        if (liveScenario) {
-            return liveScenario;
-        }
-
-        // Fallback: Empty scenario (not first from list)
         return {
             id: 'empty-initial',
             title: { en: 'New Session', zh: '新会话' },
             taskName: 'New Session',
-            userQuery: '', // 空的userQuery
+            userQuery: '',
             totalSteps: 0,
             steps: []
         };
     }, [activeScenarioId, liveScenario, allScenarios]);
 
-    // Sync evaluation result when active scenario changes
-    useEffect(() => {
-        if (activeScenario && activeScenario.evaluation) {
-            setEvaluationResult(activeScenario.evaluation);
-        } else {
-            setEvaluationResult(null);
-            // Only close modal when evaluation result is cleared (scenario changed)
-            setIsEvaluationModalOpen(false);
-        }
-    }, [activeScenarioId, activeScenario]); // Re-run if scenario content updates (e.g. after eval)
 
     // Auto-load history when clicking on a saved scenario
     useEffect(() => {
         const loadHistoryScenario = async () => {
-            // Check if user clicked on a saved scenario (not current live session)
             const clickedScenario = savedScenarios.find(s => s.id === activeScenarioId);
 
             if (clickedScenario && clickedScenario.steps.length > 0) {
-                // Check if it's different from current liveScenario
                 if (!liveScenario || liveScenario.id !== activeScenarioId) {
-                    // Load the scenario into view with correct ID
                     setLiveScenario({
                         ...clickedScenario,
-                        id: activeScenarioId // Ensure ID matches
+                        id: activeScenarioId
                     });
                     setCurrentStepIndex(clickedScenario.steps.length);
                     setIsPlaying(false);
+                    setSessionId(activeScenarioId); // Allow continuing
 
-                    // Set sessionId to match the clicked scenario
-                    // This allows continuing the conversation
-                    setSessionId(activeScenarioId);
-
-                    // Load evaluation result if exists
                     if (clickedScenario.evaluation) {
                         setEvaluationResult(clickedScenario.evaluation);
                     } else {
@@ -153,463 +144,63 @@ export const useSimulation = () => {
                 }
             }
         };
-
         loadHistoryScenario();
-    }, [activeScenarioId, savedScenarios]);
+    }, [activeScenarioId, savedScenarios, liveScenario, setLiveScenario, setCurrentStepIndex, setIsPlaying, setSessionId, setEvaluationResult]);
 
-    const timerRef = useRef<number | null>(null);
-
-    const handleReset = useCallback(() => {
-        setIsPlaying(false);
-        setCurrentStepIndex(0);
-        setErasedIndices(new Set());
-
-        setSessionId(null);
-        setLiveScenario(null);
-        setCustomQuery("");
-    }, []);
-
-    // Live Session Init
-    const handleInitSession = useCallback(async () => {
-        if (!apiKey) return;
-        setIsLoading(true);
-        try {
-            let data;
-            if (customQuery) {
-                data = await api.initCustomSession(apiKey, customQuery, payload);
-            } else {
-                // Simulation mode (initSession) has been removed.
-                // data = await api.initSession(apiKey, activeScenarioId, payload);
-                console.warn("Simulation mode is deprecated");
-                setIsLoading(false);
-                return;
-            }
-
-            setSessionId(data.sessionId);
-            setActiveScenarioId(data.sessionId); // Force ControlPanel to switch to live scenario
-            setLiveScenario({
-                id: data.task.id,
-                title: { en: "Live Session", zh: "实时会话" }, // Can be improved
-                taskName: "Live Execution",
-                userQuery: data.task.query,
-                totalSteps: 0,
-                steps: [],
-                payload: payload
-            });
-            setCurrentStepIndex(0);
-            setErasedIndices(new Set());
-            setIsPlaying(true); // Auto-play after init
-        } catch (e) {
-            console.error(e);
-            alert("Failed to init session");
-        } finally {
-            setIsLoading(false);
+    // Sync evaluation result to local state when active scenario changes
+    useEffect(() => {
+        if (activeScenario && activeScenario.evaluation) {
+            setEvaluationResult(activeScenario.evaluation);
+        } else {
+            // Avoid clearing if we are just updating the same scenario's steps
+            // Only clear if scenario ID changed
+            // But here activeScenario changes on every step update too.
+            // Rely on loadHistoryScenario for initial load.
         }
-    }, [apiKey, activeScenarioId, customQuery, payload]);
+    }, [activeScenario, setEvaluationResult]);
 
+
+    // History Management Wrappers
+    const handleDeleteScenario = async (id: string) => {
+        await deleteScenario(id);
+        if (activeScenarioId === id) {
+            // Logic moved from old useSimulation
+            const remaining = savedScenarios.filter(s => s.id !== id);
+            if (remaining.length > 0) {
+                setActiveScenarioId(remaining[0].id);
+            } else {
+                handleNewConversation(); // Create new
+            }
+        }
+        await refreshScenarios();
+    };
+
+    const handleClearAllHistory = async () => {
+        await clearAllHistory();
+        await handleNewConversation();
+        await refreshScenarios();
+    };
+
+    const handleBatchDelete = async (ids: string[]) => {
+        const result = await batchDeleteScenarios(ids);
+        if (ids.includes(activeScenarioId)) {
+            handleNewConversation();
+        }
+        await refreshScenarios();
+        return result;
+    };
+
+    // History View State
+    const [isHistoryViewOpen, setIsHistoryViewOpen] = useState(false);
     const [isComparisonMode, setIsComparisonMode] = useState(false);
 
-    // ...
-
-    const handleNext = useCallback(async () => {
-        // Live Mode Logic
-        if (!sessionId || !liveScenario) return;
-
-        // Check Termination Condition - only check the LAST step
-        // We don't check all steps because historical completed steps shouldn't block new conversations
-        // After continue_session, the backend resets done state, so we should allow new steps
-        const stepsForStatus = liveScenario.steps;
-        const getWmDone = () => {
-            for (let i = stepsForStatus.length - 1; i >= 0; i--) {
-                const s = stepsForStatus[i];
-                if (s.stepType === 'user_input') continue;
-                if (s.isHidden) continue;
-                return s.stepType === 'finish' || !!s.finalAnswer;
-            }
-            return false;
-        };
-        const getBlDone = () => {
-            for (let i = stepsForStatus.length - 1; i >= 0; i--) {
-                const s = stepsForStatus[i];
-                if (s.stepType === 'user_input') continue;
-                const b = s.baseline;
-                if (!b) continue;
-                if (b.isHidden) continue;
-                return b.stepType === 'finish' || !!b.finalAnswer;
-            }
-            return false;
-        };
-
-        const lastStep = stepsForStatus[stepsForStatus.length - 1];
-        if (lastStep && lastStep.stepType !== 'user_input') {
-            const wmDone = getWmDone();
-            const blDone = getBlDone();
-            if (wmDone && blDone) {
-                setIsPlaying(false);
-                return;
-            }
-        }
-
-        // Prevent stepping if we are already at the end of what we have fetched...
-        // UNLESS we are fetching a NEW step.
-        // Logic: "Next" in live mode triggers generation of the next step.
-
-        setIsLoading(true);
-        try {
-            // Create a placeholder step for streaming
-            const initialStepIndex = liveScenario.steps.length;
-            let currentThought = "";
-            let currentBaselineThought = "";
-
-            // Determine if agents are still running by checking last non-user step
-            // After user continuation, agents should NOT be considered "done"
-            const prevSteps = liveScenario.steps;
-            const lastNonUserStep = [...prevSteps].reverse().find(s => s.stepType !== 'user_input');
-
-            // If last step was user_input, agents need to respond - not done
-            const lastWasUserInput = prevSteps.length > 0 && prevSteps[prevSteps.length - 1].stepType === 'user_input';
-            const isWmPreDone = !lastWasUserInput && lastNonUserStep && (lastNonUserStep.stepType === 'finish' || !!lastNonUserStep.finalAnswer);
-            const isBlPreDone = !lastWasUserInput && lastNonUserStep && (lastNonUserStep.baseline?.stepType === 'finish' || !!lastNonUserStep.baseline?.finalAnswer);
-
-            // Add initial empty step
-            setLiveScenario(prev => {
-                if (!prev) return null;
-                const placeholderStep: Step = {
-                    stepIndex: initialStepIndex,
-                    timestamp: new Date().toLocaleTimeString('en-GB'), // 24h format
-                    thought: isWmPreDone ? "" : "Thinking...",
-                    action: "",
-                    distribution: [],
-                    watermark: { bits: "", matrixRows: [], rankContribution: 0 },
-                    stepType: isWmPreDone ? 'tool' : 'tool', // Avoid 'finish' to prevent duplicate UI card
-                    toolDetails: "",
-                    isHidden: isWmPreDone,
-                    baseline: {
-                        thought: isBlPreDone ? "" : "Thinking...",
-                        action: "",
-                        distribution: [],
-                        toolDetails: "",
-                        stepType: isBlPreDone ? 'tool' : 'tool', // Avoid 'finish' here too
-                        isHidden: isBlPreDone
-                    }
-                };
-                return {
-                    ...prev,
-                    totalSteps: prev.steps.length + 1,
-                    steps: [...prev.steps, placeholderStep]
-                };
-            });
-
-            // Move cursor immediately
-            setCurrentStepIndex(prev => prev + 1);
-
-            // Track if we received any result data for this step
-            let receivedWatermarkedResult = false;
-            let receivedBaselineResult = false;
-
-            await api.stepStream(sessionId, (chunk) => {
-                if (chunk.type === 'thought') {
-                    if (chunk.content) {
-                        if (chunk.agent === 'baseline') {
-                            currentBaselineThought += chunk.content;
-                            setLiveScenario(prev => {
-                                if (!prev) return null;
-                                const steps = [...prev.steps];
-                                if (steps[initialStepIndex]) {
-                                    // Ensure baseline object exists
-                                    const baseline = steps[initialStepIndex].baseline || {
-                                        thought: "", action: "", distribution: [], toolDetails: "", stepType: 'tool', isHidden: false
-                                    };
-                                    steps[initialStepIndex] = {
-                                        ...steps[initialStepIndex],
-                                        baseline: {
-                                            ...baseline,
-                                            thought: currentBaselineThought
-                                        }
-                                    };
-                                }
-                                return { ...prev, steps };
-                            });
-                        } else {
-                            // Default to watermarked
-                            currentThought += chunk.content;
-                            setLiveScenario(prev => {
-                                if (!prev) return null;
-                                const steps = [...prev.steps];
-                                if (steps[initialStepIndex]) {
-                                    steps[initialStepIndex] = {
-                                        ...steps[initialStepIndex],
-                                        thought: currentThought
-                                    };
-                                }
-                                return { ...prev, steps };
-                            });
-                        }
-                    }
-                } else if (chunk.type === 'result') {
-                    const stepData = chunk.data;
-                    const targetAgent = stepData.agent || 'watermarked'; // default to watermarked if missing
-
-                    // Mark that we received a result
-                    if (targetAgent === 'watermarked') {
-                        receivedWatermarkedResult = true;
-                    } else if (targetAgent === 'baseline') {
-                        receivedBaselineResult = true;
-                    }
-
-                    setLiveScenario(prev => {
-                        if (!prev) return null;
-                        const steps = [...prev.steps];
-                        if (!steps[initialStepIndex]) return prev;
-
-                        const existingStep = steps[initialStepIndex];
-
-                        if (targetAgent === 'watermarked') {
-                            // Update Main (Watermarked) Data
-                            // Note: Keep using initialStepIndex as stepIndex to ensure sequential numbering
-                            // Backend's stepIndex may not be sequential due to various reasons
-                            steps[initialStepIndex] = {
-                                ...existingStep,
-                                stepIndex: initialStepIndex,
-                                thought: stepData.thought || existingStep.thought,
-                                action: stepData.action,
-                                distribution: stepData.distribution || [],
-                                watermark: {
-                                    bits: stepData.watermark?.bits || "",
-                                    matrixRows: stepData.watermark?.matrixRows || [],
-                                    rankContribution: stepData.watermark?.rankContribution || 0
-                                },
-                                stepType: stepData.done ? 'finish' : 'tool',
-                                toolDetails: stepData.observation,
-                                metrics: stepData.metrics,
-                                finalAnswer: stepData.done ? (stepData.final_answer || stepData.thought || "") : undefined
-                            };
-                        } else if (targetAgent === 'baseline') {
-                            const baselineExisting = existingStep.baseline || {
-                                thought: "",
-                                action: "",
-                                distribution: [],
-                                toolDetails: "",
-                                stepType: 'tool' as const,
-                                isHidden: false
-                            };
-                            // Update Baseline Data
-                            steps[initialStepIndex] = {
-                                ...existingStep,
-                                baseline: {
-                                    ...baselineExisting,
-                                    thought: stepData.thought || baselineExisting.thought || "",
-                                    action: stepData.action,
-                                    toolDetails: stepData.observation,
-                                    distribution: stepData.distribution || [],
-                                    stepType: stepData.done ? 'finish' : 'tool',
-                                    finalAnswer: stepData.done ? (stepData.final_answer || stepData.thought || "") : undefined,
-                                    metrics: stepData.metrics
-                                }
-                            };
-                        }
-
-                        return { ...prev, steps };
-                    });
-
-                    // Check if task is completed after receiving result
-                    setLiveScenario(prev => {
-                        if (!prev) return null;
-                        const updatedSteps = prev.steps;
-                        const getWmDone = () => {
-                            for (let i = updatedSteps.length - 1; i >= 0; i--) {
-                                const s = updatedSteps[i];
-                                if (s.stepType === 'user_input') continue;
-                                if (s.isHidden) continue;
-                                return s.stepType === 'finish' || !!s.finalAnswer;
-                            }
-                            return false;
-                        };
-                        const getBlDone = () => {
-                            for (let i = updatedSteps.length - 1; i >= 0; i--) {
-                                const s = updatedSteps[i];
-                                if (s.stepType === 'user_input') continue;
-                                const b = s.baseline;
-                                if (!b) continue;
-                                if (b.isHidden) continue;
-                                return b.stepType === 'finish' || !!b.finalAnswer;
-                            }
-                            return false;
-                        };
-                        const wmDone = getWmDone();
-                        const blDone = getBlDone();
-                        if (wmDone && blDone) {
-                            setIsPlaying(false);
-                        }
-                        return prev;
-                    });
-                }
-            });
-
-            // After stream ends, check if placeholder step received any data
-            // Only remove it if it's truly empty (no data received from either agent)
-            // DO NOT remove steps that have received data, even if task is completed
-            setLiveScenario(prev => {
-                if (!prev) return null;
-                const steps = [...prev.steps];
-                const placeholderStep = steps[initialStepIndex];
-
-                if (placeholderStep) {
-                    // Check if this step received any real data
-                    // A step has data if it has action, non-placeholder thought, or distribution
-                    const hasWatermarkedData = placeholderStep.action ||
-                        (placeholderStep.thought && placeholderStep.thought !== "Thinking..." && placeholderStep.thought !== "") ||
-                        placeholderStep.distribution.length > 0 ||
-                        placeholderStep.stepType === 'finish' ||
-                        !!placeholderStep.finalAnswer;
-
-                    const hasBaselineData = placeholderStep.baseline?.action ||
-                        (placeholderStep.baseline?.thought && placeholderStep.baseline.thought !== "Thinking..." && placeholderStep.baseline.thought !== "") ||
-                        (placeholderStep.baseline?.distribution?.length ?? 0) > 0 ||
-                        placeholderStep.baseline?.stepType === 'finish' ||
-                        !!placeholderStep.baseline?.finalAnswer;
-
-                    // Only remove if we didn't receive any result AND the step has no data
-                    // This means it's a truly empty placeholder that was created but never filled
-                    const shouldRemove = !receivedWatermarkedResult && !receivedBaselineResult &&
-                        !hasWatermarkedData && !hasBaselineData;
-
-                    if (shouldRemove) {
-                        // Remove the invalid placeholder step (only if it's truly empty)
-                        steps.splice(initialStepIndex, 1);
-                        return {
-                            ...prev,
-                            totalSteps: steps.length,
-                            steps: steps
-                        };
-                    }
-                }
-                return prev;
-            });
-
-            // Auto-save after each step completes
-            // Wait a bit for state to update, then save
-            setTimeout(async () => {
-                if (sessionId) {
-                    try {
-                        // Re-fetch the latest liveScenario from state
-                        setLiveScenario(currentScenario => {
-                            if (!currentScenario) return null;
-
-                            // Save the current state
-                            const updatedScenario = {
-                                ...currentScenario,
-                                id: sessionId
-                            };
-
-                            // Generate title if needed
-                            let titleToSave = updatedScenario.title;
-                            if ((!titleToSave.en || titleToSave.en === "Live Session" || titleToSave.en === "New Session" || titleToSave.en === "New Chat") && updatedScenario.steps.length > 0) {
-                                const firstMessage = updatedScenario.userQuery || updatedScenario.steps[0]?.thought || "";
-                                const titlePreview = firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage;
-                                titleToSave = { en: titlePreview, zh: titlePreview };
-                            }
-
-                            // Save to database (fire and forget)
-                            api.saveScenario(titleToSave, updatedScenario, sessionId).then(() => {
-                                console.log('[Auto-save] Saved after step completion');
-                            }).catch(err => {
-                                console.error('[Auto-save] Failed to save scenario:', err);
-                            });
-
-                            return currentScenario; // Return unchanged
-                        });
-                    } catch (err) {
-                        console.error('[Auto-save] Error during save:', err);
-                    }
-                }
-            }, 500); // Wait 500ms for state updates to complete
-
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsLoading(false);
-        }
-        return;
-    }, [currentStepIndex, activeScenario, sessionId, liveScenario]);
-
-    const handlePrev = useCallback(() => {
-        if (currentStepIndex > 0) {
-            setCurrentStepIndex(prev => prev - 1);
-        }
-    }, [currentStepIndex]);
-
-    // Real-time Erasure Update Effect
-    // This ensures that changing the slider immediately updates the visualization
-    useEffect(() => {
-        const newErasedIndices = new Set<number>();
-        // Check all currently visible steps
-        for (let i = 0; i <= currentStepIndex; i++) {
-            // Use a stable hash to determine if this step is erased at the current rate
-            // This ensures meaningful control: higher rate = more erased, lower = less.
-            // Hash function: (index * 2654435761) % 100
-            // 2654435761 is Knuth's multiplicative hash constant (approx 2^32 * phi)
-            const hash = (i * 2654435761) % 100;
-            if (hash < erasureRate) {
-                newErasedIndices.add(i);
-            }
-        }
-        setErasedIndices(newErasedIndices);
-    }, [erasureRate, currentStepIndex]); // Re-run when rate changes or we step forward
-
-    // Timer Logic (Auto Play)
-    useEffect(() => {
-        if (isPlaying) {
-            timerRef.current = window.setInterval(async () => {
-                if (isLoading) return; // Wait for request
-                await handleNext();
-            }, 2000); // Slower for live mode API calls
-        } else {
-            if (timerRef.current) clearInterval(timerRef.current);
-        }
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, [isPlaying, activeScenario, isLoading, handleNext]);
-
-    // Auto-save effect: Save every 10 seconds if there are changes
-    useEffect(() => {
-        if (!liveScenario || !sessionId || liveScenario.steps.length === 0) {
-            return;
-        }
-
-        const autoSaveInterval = setInterval(async () => {
-            try {
-                const updatedScenario = {
-                    ...liveScenario,
-                    id: sessionId
-                };
-
-                // Generate title if needed
-                let titleToSave = updatedScenario.title;
-                if ((!titleToSave.en || titleToSave.en === "Live Session" || titleToSave.en === "New Session" || titleToSave.en === "New Chat") && updatedScenario.steps.length > 0) {
-                    const firstMessage = updatedScenario.userQuery || updatedScenario.steps[0]?.thought || "";
-                    const titlePreview = firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage;
-                    titleToSave = { en: titlePreview, zh: titlePreview };
-                }
-
-                await api.saveScenario(titleToSave, updatedScenario, sessionId);
-                console.log('[Auto-save] Saved scenario:', sessionId);
-            } catch (err) {
-                console.error('[Auto-save] Periodic save failed:', err);
-            }
-        }, 10000); // Save every 10 seconds
-
-        return () => clearInterval(autoSaveInterval);
-        return () => clearInterval(autoSaveInterval);
-    }, [liveScenario, sessionId]);
 
     return {
         scenarios: allScenarios,
         activeScenario,
         activeScenarioId,
         setActiveScenarioId,
-        refreshScenarios, // Exported
+        refreshScenarios,
         isPlaying,
         setIsPlaying,
         currentStepIndex,
@@ -620,473 +211,36 @@ export const useSimulation = () => {
         handleNext,
         handlePrev,
         visibleSteps: activeScenario.steps.slice(0, currentStepIndex),
-        // Live Mode Props
-        // Live Mode Props
-        // isLiveMode: true, // Always true
-        // setIsLiveMode, // Removed
-        isComparisonMode, // New
-        setIsComparisonMode, // New
+
+        isComparisonMode,
+        setIsComparisonMode,
+
         apiKey,
         setApiKey,
         handleInitSession,
         isLoading,
+        setIsLoading,
         customQuery,
         setCustomQuery,
         payload,
         setPayload,
         sessionId,
 
-        // History View
         isHistoryViewOpen,
         setIsHistoryViewOpen,
 
+        handleContinue,
+        handleNewConversation,
 
-        handleContinue: async (prompt: string) => {
-            // Case 0: New Session (No Session ID yet - either from welcome page or "New Chat")
-            if (!sessionId) {
-                // Initialize Session with this prompt as the custom query
-                setIsLoading(true);
-                setCustomQuery(prompt);
-                try {
-                    const data = await api.initCustomSession(apiKey, prompt, payload);
-
-                    const newSessionId = data.sessionId;
-                    setSessionId(newSessionId);
-
-                    // Create scenario with prompt as title preview
-                    const titlePreview = prompt.length > 30 ? prompt.substring(0, 30) + '...' : prompt;
-
-                    const updatedScenario = {
-                        id: newSessionId,
-                        title: { en: titlePreview, zh: titlePreview },
-                        taskName: "Live Execution",
-                        userQuery: data.task.query,
-                        totalSteps: 0,
-                        steps: [],
-                        payload: payload
-                    };
-
-                    // If there's an existing "New Chat" entry (not saved to DB yet), just replace it
-                    // No need to delete from DB since empty chats are not saved
-                    if (liveScenario && (liveScenario.title.en === "New Chat" || liveScenario.title.zh === "新对话")) {
-                        try {
-                            // Only try to delete if it was actually saved to DB (has sessionId format)
-                            if (liveScenario.id.startsWith('sess_')) {
-                                await api.deleteScenario(liveScenario.id);
-                            }
-                            // Save the new session with actual content
-                            await api.saveScenario(updatedScenario.title, updatedScenario, newSessionId);
-                            await refreshScenarios();
-                        } catch (e) {
-                            console.error("Failed to update scenario", e);
-                        }
-                    } else {
-                        // First message in a brand new chat - save it
-                        try {
-                            await api.saveScenario(updatedScenario.title, updatedScenario, newSessionId);
-                            await refreshScenarios();
-                        } catch (e) {
-                            console.error("Failed to save new conversation", e);
-                        }
-                    }
-
-                    setLiveScenario(updatedScenario);
-                    setActiveScenarioId(newSessionId);
-                    setCurrentStepIndex(0);
-                    setErasedIndices(new Set());
-                    setIsPlaying(true);
-                } catch (e) {
-                    console.error(e);
-                    alert("Failed to start new session");
-                } finally {
-                    setIsLoading(false);
-                }
-                return;
-            }
-
-            // Restore session if needed (e.g. continuing from history)
-            let currentSessionId = sessionId;
-            if (!currentSessionId || currentSessionId !== activeScenarioId) {
-                setIsLoading(true);
-                try {
-                    const data = await api.restoreSession(apiKey, activeScenarioId);
-                    currentSessionId = data.sessionId;
-                    setSessionId(currentSessionId);
-
-                    // Ensure liveScenario is synced with the restored session
-                    setLiveScenario({ ...activeScenario });
-                    setCurrentStepIndex(activeScenario.steps.length);
-                } catch (e) {
-                    console.error("Failed to restore session", e);
-                    alert("无法恢复之前的会话。请尝试重新开始。");
-                    setIsLoading(false);
-                    return;
-                } finally {
-                    setIsLoading(false);
-                }
-            }
-
-            // Inject User Step locally for display (Optimistic UI)
-            // 1221: Add baseline data for alignment in ComparisonView
-            setLiveScenario(prev => {
-                if (!prev) return null; // Should not happen if restored above
-                const userStep: Step = {
-                    stepIndex: prev.steps.length,
-                    timestamp: new Date().toLocaleTimeString('en-GB'),
-                    thought: prompt,
-                    action: "",
-                    distribution: [],
-                    watermark: { bits: "", matrixRows: [], rankContribution: 0 },
-                    stepType: 'user_input',
-                    // 1221: Ensure user_input has baseline data for alignment
-                    baseline: {
-                        thought: prompt,
-                        action: "",
-                        distribution: [],
-                        toolDetails: "",
-                        stepType: 'user_input'
-                    }
-                };
-                return {
-                    ...prev,
-                    totalSteps: prev.steps.length + 1,
-                    steps: [...prev.steps, userStep]
-                };
-            });
-            setCurrentStepIndex(prev => prev + 1);
-
-            setIsLoading(true);
-            try {
-                await api.continueSession(currentSessionId!, prompt);
-                // After continuing, the backend resets done state, so we can proceed
-                // Set isPlaying to true to enable auto-play, which will trigger handleNext
-                setIsPlaying(true);
-
-                // Auto-save after user input
-                if (liveScenario && currentSessionId) {
-                    try {
-                        const updatedScenario = {
-                            ...liveScenario,
-                            id: currentSessionId
-                        };
-
-                        // Generate title if needed
-                        let titleToSave = updatedScenario.title;
-                        if ((!titleToSave.en || titleToSave.en === "Live Session" || titleToSave.en === "New Session" || titleToSave.en === "New Chat") && updatedScenario.steps.length > 0) {
-                            const firstMessage = updatedScenario.userQuery || updatedScenario.steps[0]?.thought || prompt;
-                            const titlePreview = firstMessage.length > 30 ? firstMessage.substring(0, 30) + '...' : firstMessage;
-                            titleToSave = { en: titlePreview, zh: titlePreview };
-                        }
-
-                        // Save to database (fire and forget)
-                        api.saveScenario(titleToSave, updatedScenario, currentSessionId).catch(err => {
-                            console.error('[Auto-save] Failed to save after continue:', err);
-                        });
-                    } catch (err) {
-                        console.error('[Auto-save] Error during continue save:', err);
-                    }
-                }
-            } catch (e: any) {
-                // 1222: Handle 404 (Session Not Found) by attempting to restore and retry
-                if (e.response?.status === 404) {
-                    console.log("Session not found on server (404). Attempting to restore...", currentSessionId);
-                    try {
-                        const restoreData = await api.restoreSession(apiKey, activeScenarioId);
-                        const restoredSessionId = restoreData.sessionId;
-                        setSessionId(restoredSessionId);
-                        console.log("Session restored. Retrying continue...", restoredSessionId);
-
-                        await api.continueSession(restoredSessionId, prompt);
-
-                        setIsPlaying(true);
-                        // Auto-save after user input (retry)
-                        if (liveScenario) {
-                            const updatedScenario = { ...liveScenario, id: restoredSessionId };
-                            setLiveScenario(updatedScenario);
-                            // Background save
-                            api.saveScenario(updatedScenario.title, updatedScenario, updatedScenario.id, "custom")
-                                .catch((err: any) => console.error(err));
-                        }
-
-                    } catch (retryError: any) {
-                        console.error("Retry failed:", retryError);
-                        const msg = retryError.response?.data?.detail || retryError.message || "Unknown error";
-                        alert(`Failed to restore and continue session: ${msg}`);
-                    }
-                } else {
-                    console.error(e);
-                    const msg = e.response?.data?.detail || e.message || "Unknown error";
-                    alert(`Failed to continue session: ${msg}`);
-                }
-            } finally {
-                setIsLoading(false);
-            }
-
-        },
-
-        handleNewConversation: async () => {
-            // Auto Save current if valid (relaxed conditions)
-            if (liveScenario && liveScenario.steps.length > 0) {
-                try {
-                    // Use sessionId if available, otherwise generate one from liveScenario.id
-                    const saveId = sessionId || liveScenario.id;
-
-                    // Generate Title if needed
-                    let titleToSave = liveScenario.title;
-                    if ((!titleToSave.en || titleToSave.en === "Live Session" || titleToSave.en === "New Session" || titleToSave.en === "New Chat") && liveScenario.steps.length > 0) {
-                        try {
-                            const res = await api.generateTitle(liveScenario.steps.map(s => ({
-                                role: s.stepType === 'user_input' ? 'user' : (s.stepType === 'tool' ? 'tool' : 'assistant'),
-                                message: s.thought || s.toolDetails || s.action
-                            })));
-                            if (res.title) {
-                                titleToSave = { en: res.title, zh: res.title };
-                            }
-                        } catch (err) {
-                            // Ignore title generation errors
-                        }
-                    }
-
-                    // Save with sessionId as the permanent ID
-                    await api.saveScenario(titleToSave, {
-                        ...liveScenario,
-                        id: saveId,
-                        title: titleToSave
-                    }, saveId);
-
-                    // Wait for database to update
-                    await new Promise(resolve => setTimeout(resolve, 200));
-
-                    // Refresh history list
-                    await refreshScenarios();
-                } catch (e) {
-                    // Ignore save errors, continue with new conversation
-                }
-            }
-
-            // Create new empty conversation with unique ID
-            const newChatId = `new_${Date.now()}`;
-            const newEmptyScenario: Trajectory = {
-                id: newChatId,
-                title: { en: "New Chat", zh: "新对话" },
-                taskName: "New Chat",
-                userQuery: "",
-                totalSteps: 0,
-                steps: []
-            };
-
-            // 不再立即保存空会话，等待用户发送第一条消息时才保存
-            // 这样可以避免历史记录中出现大量空会话
-
-            // Reset for New Conversation (Stay in Live Mode)
-            setIsPlaying(false);
-            setCurrentStepIndex(0);
-            setErasedIndices(new Set());
-            setSessionId(null); // Clear sessionId - will be created when user sends first message
-            setCustomQuery("");
-
-            setLiveScenario(newEmptyScenario);
-            setActiveScenarioId(newChatId);
-
-        },
-
-        saveCurrentScenario: async () => {
-            if (activeScenario) {
-                // If it's a temp ID (starts with 'new-'), pass undefined to create new, else pass ID to update
-                const idToUpdate = activeScenario.id.startsWith("new-") ? undefined : activeScenario.id;
-                const res = await api.saveScenario(activeScenario.title.en, activeScenario, idToUpdate);
-
-                // If we got a new ID (was temp), update the scenario in state
-                if (res.id && activeScenario.id !== res.id) {
-                    if (liveScenario && liveScenario.id === activeScenario.id) {
-                        setLiveScenario(prev => prev ? ({ ...prev, id: res.id }) : null);
-                    }
-                }
-                await refreshScenarios();
-            }
-        },
-
-
-
-
-        // Evaluation
         evaluationResult,
         isEvaluating,
-        setEvaluationResult,
-        isEvaluationModalOpen, // Export
-        setIsEvaluationModalOpen, // Export
-        evaluateSession: async (language: string = "en", force: boolean = false) => {
-            // Check if we have an active scenario
-            if (!activeScenarioId || !activeScenario || activeScenario.steps.length === 0) {
-                alert(language === 'zh' ? '没有可评估的对话' : 'No conversation to evaluate');
-                return;
-            }
+        isEvaluationModalOpen,
+        setIsEvaluationModalOpen,
+        evaluateSession: (lang?: string, force?: boolean) => evaluateSession(sessionId || activeScenarioId, lang, force),
 
-            if (evaluationResult && !force) {
-                setIsEvaluationModalOpen(true);
-                return;
-            }
-
-            setIsEvaluating(true);
-            setIsEvaluationModalOpen(true);
-
-            try {
-                // ALWAYS restore session for evaluation to ensure fresh session with both agents' data
-                console.log('[Evaluate] Active scenarioId:', activeScenarioId);
-                console.log('[Evaluate] Active scenario:', activeScenario);
-                console.log('[Evaluate] API Key:', apiKey ? 'Present' : 'Missing');
-                console.log('[Evaluate] Restoring session for evaluation...');
-
-                let currentSessionId: string;
-                try {
-                    const data = await api.restoreSession(apiKey, activeScenarioId);
-                    currentSessionId = data.sessionId;
-                    setSessionId(currentSessionId);
-                    console.log('[Evaluate] Session restored successfully:', currentSessionId);
-                    console.log('[Evaluate] Restored data:', data);
-
-                    // Wait a bit for session to be fully initialized
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                } catch (restoreError: any) {
-                    console.error('[Evaluate] Failed to restore session:', restoreError);
-                    console.error('[Evaluate] Error response:', restoreError.response);
-                    const errMsg = restoreError.response?.data?.detail || restoreError.message;
-                    throw new Error(`Failed to restore session: ${errMsg}`);
-                }
-
-                console.log('[Evaluate] Evaluating session:', currentSessionId);
-                const result = await api.evaluateSession(currentSessionId, language);
-                console.log('[Evaluate] Evaluation result:', result);
-                setEvaluationResult(result);
-
-                // Update liveScenario to persist this result in memory for now
-                if (liveScenario && activeScenarioId === liveScenario.id) {
-                    setLiveScenario(prev => prev ? ({ ...prev, evaluation: result }) : null);
-                }
-
-                // Also update savedScenarios if it exists there
-                setSavedScenarios(prev => prev.map(s =>
-                    s.id === activeScenarioId ? { ...s, evaluation: result } : s
-                ));
-
-                // Refresh scenarios from database to ensure evaluation is persisted
-                await refreshScenarios();
-
-            } catch (e: any) {
-                console.error("Evaluation failed", e);
-                const errorMsg = e.response?.data?.detail || e.message || "Unknown error";
-                alert(`Evaluation failed: ${errorMsg}\n\nPlease make sure:\n1. The conversation has completed steps\n2. Both agents have responses\n3. The backend server is running`);
-                setIsEvaluationModalOpen(false); // Close on error
-            } finally {
-                setIsEvaluating(false);
-            }
-        },
-
-        deleteScenario: async (scenarioId: string) => {
-            try {
-                await api.deleteScenario(scenarioId);
-
-                // If deleting current scenario, switch to another one
-                if (activeScenarioId === scenarioId) {
-                    // Find another scenario to switch to
-                    const remaining = savedScenarios.filter(s => s.id !== scenarioId);
-                    if (remaining.length > 0) {
-                        setActiveScenarioId(remaining[0].id);
-                    } else {
-                        // No scenarios left, create a new one
-                        const newSessionId = `sess_${Date.now()}_new`;
-                        const newEmptyScenario: Trajectory = {
-                            id: newSessionId,
-                            title: { en: "New Chat", zh: "新对话" },
-                            taskName: "New Chat",
-                            userQuery: "",
-                            totalSteps: 0,
-                            steps: []
-                        };
-                        setLiveScenario(newEmptyScenario);
-                        setActiveScenarioId(newSessionId);
-                    }
-                }
-
-                // Refresh scenarios list
-                await refreshScenarios();
-            } catch (e) {
-                console.error("Delete failed", e);
-                alert("删除失败，请重试");
-            }
-        },
-
-        clearAllHistory: async () => {
-            try {
-                console.log("[DEBUG] Starting clearAllHistory...");
-                const result = await api.clearAllHistory();
-                console.log("[DEBUG] API response:", result);
-
-                // Create a new empty scenario
-                const newChatId = `new_${Date.now()}`;
-                const newEmptyScenario: Trajectory = {
-                    id: newChatId,
-                    title: { en: "New Chat", zh: "新对话" },
-                    taskName: "New Chat",
-                    userQuery: "",
-                    totalSteps: 0,
-                    steps: []
-                };
-                setLiveScenario(newEmptyScenario);
-                setActiveScenarioId(newChatId);
-
-                setSessionId(null);
-
-                // Refresh scenarios list
-                console.log("[DEBUG] Refreshing scenarios...");
-                await refreshScenarios();
-                console.log("[DEBUG] clearAllHistory completed successfully");
-            } catch (e: any) {
-                console.error("Clear all failed", e);
-                const errorMsg = e.response?.data?.detail || e.message || "未知错误";
-                throw new Error(`清空失败: ${errorMsg}`);
-            }
-        },
-
-        batchDeleteScenarios: async (ids: string[]) => {
-            try {
-                const result = await api.batchDeleteScenarios(ids);
-                console.log(`[INFO] Batch deleted ${result.deleted_count} scenarios`);
-
-                // If current scenario was deleted, switch to a new one
-                if (ids.includes(activeScenarioId)) {
-                    const newChatId = `new_${Date.now()}`;
-                    const newEmptyScenario: Trajectory = {
-                        id: newChatId,
-                        title: { en: "New Chat", zh: "新对话" },
-                        taskName: "New Chat",
-                        userQuery: "",
-                        totalSteps: 0,
-                        steps: []
-                    };
-                    setLiveScenario(newEmptyScenario);
-                    setActiveScenarioId(newChatId);
-
-                    setSessionId(null);
-                }
-
-                // Refresh scenarios list
-                await refreshScenarios();
-                return result;
-            } catch (e: any) {
-                console.error("Batch delete failed", e);
-                throw e;
-            }
-        },
-
-        togglePin: async (scenarioId: string) => {
-            try {
-                await api.togglePin(scenarioId);
-                await refreshScenarios();
-            } catch (e) {
-                console.error("Toggle pin failed", e);
-                alert("收藏操作失败，请重试");
-            }
-        }
+        deleteScenario: handleDeleteScenario,
+        clearAllHistory: handleClearAllHistory,
+        batchDeleteScenarios: handleBatchDelete,
+        togglePin
     };
 };

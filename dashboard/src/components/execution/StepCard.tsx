@@ -186,7 +186,7 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                                                     transform: 'translateX(-50%) rotate(90deg)'
                                                 }}
                                             >
-                                                <img src="/手指.svg" alt="selected" className="w-full h-full" />
+                                                <img src="/finger.svg" alt="selected" className="w-full h-full" />
                                             </div>
                                         )}
                                         <ResponsiveContainer width="99%" height="100%">
@@ -230,7 +230,7 @@ const StepCard: React.FC<StepCardProps> = ({ step, isErased, showWatermarkDetail
                                                             transform: 'translateX(-50%) rotate(90deg)'
                                                         }}
                                                     >
-                                                        <img src="/手指.svg" alt="selected" className="w-full h-full" />
+                                                        <img src="/finger.svg" alt="selected" className="w-full h-full" />
                                                     </div>
                                                 )}
                                                 <ResponsiveContainer width="99%" height="100%">

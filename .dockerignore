@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+venv/
+ENV/
+
+# Node
+node_modules/
+npm-debug.log
+dashboard/node_modules/
+dashboard/dist/
+
+# Large Data (Optional - if really large, exclude and use volumes)
+# If we want to bake some data in, keep it. But usually we exclude huge datasets.
+# experiments/toolbench/data/data/toolenv/tools/retriever_cache.zip
+# data/ (assuming data folder might be big)
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
