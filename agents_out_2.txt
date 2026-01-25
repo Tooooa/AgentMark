@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/root/autodl-tmp/AgentMark2/AgentMark/demo_agents.py", line 33, in main
+    result = await runner.run(
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/run.py", line 377, in run
+    return await runner.run(
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/run.py", line 637, in run
+    current_span.span_data.tools = [t.name for t in all_tools]
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/run.py", line 637, in <listcomp>
+    current_span.span_data.tools = [t.name for t in all_tools]
+AttributeError: 'function' object has no attribute 'name'
+Base URL: http://localhost:8003/v1
+Initializing Runner...
+Running agent...
+Error running agent: 'function' object has no attribute 'name'
+Exception ignored in atexit callback: <bound method DefaultTraceProvider.shutdown of <agents.tracing.provider.DefaultTraceProvider object at 0x7f87178ef4f0>>
+Traceback (most recent call last):
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/tracing/provider.py", line 367, in shutdown
+    self._multi_processor.shutdown()
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/tracing/provider.py", line 115, in shutdown
+    processor.shutdown()
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/tracing/processors.py", line 256, in shutdown
+    self._worker_thread.join(timeout=timeout)
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/threading.py", line 1096, in join
+    self._wait_for_tstate_lock()
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/threading.py", line 1116, in _wait_for_tstate_lock
+    if lock.acquire(block, timeout):
+KeyboardInterrupt: 

@@ -1,4 +1,4 @@
-from agents import Agent, Runner
+from agents import Agent, Runner, function_tool
 import asyncio
 import os
 
@@ -11,7 +11,7 @@ def get_weather(location: str) -> str:
 agent = Agent(
     name="WeatherBot",
     instructions="You are a helpful assistant. Use tools to check weather.",
-    tools=[get_weather],
+    tools=[function_tool(get_weather)],
 )
 
 # 3. Define Main Loop
@@ -32,7 +32,7 @@ async def main():
         # Let's try to inspect Runner.run signature dynamically if possible or just guess
         result = await runner.run(
             agent,
-            messages=[{"role": "user", "content": "What is the weather in Beijing?"}]
+            input=[{"role": "user", "content": "What is the weather in Beijing?"}]
         )
         print("--- Result ---")
         print(result)

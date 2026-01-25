@@ -1,8 +1,24 @@
 Traceback (most recent call last):
-  File "/root/autodl-tmp/AgentMark2/AgentMark/demo_agents.py", line 33, in main
-    result = await runner.run(
-TypeError: Runner.run() got an unexpected keyword argument 'messages'
-Base URL: http://localhost:8003/v1
-Initializing Runner...
-Running agent...
-Error running agent: Runner.run() got an unexpected keyword argument 'messages'
+  File "/root/autodl-tmp/AgentMark2/AgentMark/demo_agents.py", line 1, in <module>
+    from agents import Agent, Runner
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/__init__.py", line 8, in <module>
+    from .agent import (
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/agent.py", line 17, in <module>
+    from .mcp import MCPUtil
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/mcp/__init__.py", line 2, in <module>
+    from .manager import MCPServerManager
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/mcp/manager.py", line 10, in <module>
+    from .server import MCPServer
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/agents/mcp/server.py", line 18, in <module>
+    from mcp import ClientSession, StdioServerParameters, Tool as MCPTool, stdio_client
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/mcp/__init__.py", line 1, in <module>
+    from .client.session import ClientSession
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/mcp/client/session.py", line 10, in <module>
+    import mcp.types as types
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/mcp/types.py", line 1836, in <module>
+    class ElicitRequestFormParams(RequestParams):
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/pydantic/_internal/_model_construction.py", line 175, in __new__
+    cls.__pydantic_decorators__ = DecoratorInfos.build(cls)
+  File "/root/miniconda3/envs/toolbench/lib/python3.10/site-packages/pydantic/_internal/_decorators.py", line 461, in build
+    if isinstance(var_value, PydanticDescriptorProxy):
+KeyboardInterrupt
