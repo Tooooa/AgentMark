@@ -111,7 +111,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
     }, [visibleSteps]);
 
     const renderUserQueryPair = (query: string, key: string) => {
-        // 插件模式显示两个（用户提问 + 用户提问+指令），普通模式只显示一个居中
+        // Show two in plugin mode (User Question + User Question + Instruction), only one centered in standard mode
         if (isAddAgent && promptInstruction) {
             const rightQuery = `${query}\n\n${promptInstruction}`;
             return (
@@ -150,7 +150,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
             );
         }
 
-        // 普通模式：只显示一个居中的用户提问
+        // Standard mode: show only one centered user question
         return (
             <div key={key} className="col-span-2 my-4">
                 <div className="w-full flex justify-center">
@@ -204,7 +204,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
 
                     {/* Render segments */}
                     {segments.map((segment, segIndex) => {
-                        // 计算当前 segment 之前的累计步骤数
+                        // Calculate accumulated step count before current segment
                         const prevBaselineCount = segments.slice(0, segIndex).reduce((acc, s) => acc + s.baselineSteps.length, 0);
                         const prevWatermarkedCount = segments.slice(0, segIndex).reduce((acc, s) => acc + s.watermarkedSteps.length, 0);
 

@@ -156,11 +156,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
                                 // Base dimensions
                                 const baseWidth = '420px';
-                                const activeWidth = '520px'; // 扩大
+                                const activeWidth = '520px'; // Enlarge
                                 const expandedWidth = '620px'; // Tool use expanded
 
-                                const baseHeight = '140px'; // 扩大
-                                const activeHeight = '160px'; // 扩大
+                                const baseHeight = '140px'; // Enlarge
+                                const activeHeight = '160px'; // Enlarge
                                 const expandedHeight = '650px'; // Tool use expanded
 
                                 const getModeTitle = (m: any) => m.title;
@@ -190,7 +190,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                         }}
                                         onClick={() => {
                                             if (mode.id === 'tool') {
-                                                // 直接跳转到主页面，不展开配置
+                                                // Directly navigate to main page, no expansion
                                                 onStart({
                                                     scenarioId: '',
                                                     payload: payload,
@@ -198,7 +198,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                                                     query: ''
                                                 });
                                             } else if (mode.id === 'self' || mode.id === 'add') {
-                                                // 显示开发中提示
+                                                // Show development toast
                                                 setShowToast(true);
                                                 setTimeout(() => setShowToast(false), 2000);
                                                 setActiveIndex(index);

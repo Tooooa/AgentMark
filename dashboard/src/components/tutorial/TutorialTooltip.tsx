@@ -9,7 +9,7 @@ interface TutorialTooltipProps {
     onNext: () => void;
     onSkip: () => void;
     targetRef?: React.RefObject<HTMLElement | null> | null;
-    mode?: 'standard' | 'compare'; // 添加模式属性
+    mode?: 'standard' | 'compare'; // Add mode property
 }
 
 const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
@@ -19,7 +19,7 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
     onNext,
     onSkip,
     targetRef,
-    mode = 'standard' // 默认为standard模式
+    mode = 'standard' // Default to standard mode
 }) => {
     const [position, setPosition] = React.useState({ top: 0, left: 0 });
     const [arrowPosition, setArrowPosition] = React.useState<'top' | 'bottom' | 'left' | 'right'>('top');
@@ -32,49 +32,49 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
             console.log('  rect.top:', rect.top, 'rect.left:', rect.left, 'rect.right:', rect.right, 'rect.bottom:', rect.bottom);
             console.log('  rect.width:', rect.width, 'rect.height:', rect.height);
 
-            // 根据步骤决定提示框位置
+            // Determine tooltip position based on step
             let tooltipTop = 0;
             let tooltipLeft = 0;
             let arrow: 'top' | 'bottom' | 'left' | 'right' = 'top';
 
             if (mode === 'compare') {
-                // Compare模式的位置计算
+                // Calculate position for Compare mode
                 switch (step) {
-                    case 1: // EVALUATING区域 - 屏幕中间偏右
+                    case 1: // EVALUATING area - middle right of screen
                         tooltipTop = rect.top + 40;
                         tooltipLeft = rect.left + 30;
                         arrow = 'left';
                         break;
-                    case 2: // Utility Monitor - 右侧
+                    case 2: // Utility Monitor - right side
                         tooltipTop = rect.top + 10;
                         tooltipLeft = rect.right + 30;
                         arrow = 'left';
                         break;
-                    case 3: // Chart柱状图 - 左侧
+                    case 3: // Chart bar graph - left side
                         tooltipTop = rect.top + 50;
                         tooltipLeft = rect.left - 320;
                         arrow = 'right';
                         break;
                 }
             } else {
-                // Standard模式的位置计算
+                // Calculate position for Standard mode
                 switch (step) {
-                    case 1: // 设置按钮 - 下方
+                    case 1: // Settings button - below
                         tooltipTop = rect.bottom + 15;
                         tooltipLeft = rect.left - 80;
                         arrow = 'top';
                         break;
-                    case 2: // 信道噪声 - 左侧
+                    case 2: // Channel noise - left side
                         tooltipTop = rect.top;
                         tooltipLeft = rect.left - 315;
                         arrow = 'right';
                         break;
-                    case 3: // 模式切换 - 右侧
+                    case 3: // Mode toggle - right side
                         tooltipTop = rect.top;
                         tooltipLeft = rect.right + 15;
                         arrow = 'left';
                         break;
-                    case 4: // 提示词输入框 - 上方
+                    case 4: // Prompt input box - above
                         tooltipTop = rect.top - 210;
                         tooltipLeft = rect.left + rect.width / 2 - 150;
                         arrow = 'bottom';
@@ -82,29 +82,29 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
                 }
             }
 
-            // 边界检查：防止提示框超出屏幕
-            const tooltipWidth = 300; // 提示框宽度
-            const tooltipHeight = 250; // 提示框大致高度
+            // Boundary check: prevent tooltip from overflowing screen
+            const tooltipWidth = 300; // Tooltip width
+            const tooltipHeight = 250; // Approximate tooltip height
             const screenWidth = window.innerWidth;
             const screenHeight = window.innerHeight;
 
             console.log('  screen size:', screenWidth, 'x', screenHeight);
             console.log('  before boundary check - top:', tooltipTop, 'left:', tooltipLeft, 'arrow:', arrow);
 
-            // 如果右侧放不下，改为左侧
+            // If right side doesn't fit, switch to left
             if (arrow === 'left' && tooltipLeft + tooltipWidth > screenWidth) {
                 tooltipLeft = rect.left - tooltipWidth - 15;
                 arrow = 'right';
                 console.log('  adjusted to left side');
             }
 
-            // 如果左侧放不下，保持原样或调整
+            // If left side doesn't fit, keep as is or adjust
             if (arrow === 'right' && tooltipLeft < 0) {
                 tooltipLeft = 15;
                 console.log('  adjusted left position to avoid negative');
             }
 
-            // 如果位置在屏幕外（负数或太大），强制显示在屏幕中央
+            // If position is off-screen (negative or too large), force display in center
             if (tooltipTop < 0) {
                 tooltipTop = 100;
                 console.log('  adjusted top to avoid being above screen');
@@ -114,15 +114,15 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
                 console.log('  adjusted left to avoid being left of screen');
             }
 
-            // 如果下方放不下，改为上方
+            // If bottom doesn't fit, switch to top
             if (arrow === 'top' && tooltipTop + tooltipHeight > screenHeight) {
                 tooltipTop = rect.top - tooltipHeight - 15;
-                if (tooltipTop < 0) tooltipTop = 100; // 再次检查
+                if (tooltipTop < 0) tooltipTop = 100; // Check again
                 arrow = 'bottom';
                 console.log('  adjusted to top side');
             }
 
-            // 如果右侧放不下
+            // If right side doesn't fit
             if (tooltipLeft + tooltipWidth > screenWidth) {
                 tooltipLeft = screenWidth - tooltipWidth - 15;
                 console.log('  adjusted left to fit screen width');
@@ -179,13 +179,13 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* 遮罩层 - 阻止点击其他区域 */}
+                    {/* Overlay - prevent clicking other areas */}
                     <div
                         className="fixed inset-0 z-[200]"
                         style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
                     />
 
-                    {/* 提示框 */}
+                    {/* Tooltip box */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -197,7 +197,7 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* 尖角 */}
+                        {/* Arrow */}
                         <div
                             className="absolute w-0 h-0"
                             style={{
@@ -233,7 +233,7 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
                             }}
                         />
 
-                        {/* 步骤指示 */}
+                        {/* Step indicator */}
                         <div className="flex items-center gap-2 mb-3">
                             <span className="bg-indigo-100 text-indigo-600 text-xs font-bold px-2 py-1 rounded">
                                 {step}/{totalSteps}
@@ -241,12 +241,12 @@ const TutorialTooltip: React.FC<TutorialTooltipProps> = ({
                             <span className="text-xs text-slate-400">{locale === 'zh' ? '操作指南' : 'Tutorial'}</span>
                         </div>
 
-                        {/* 内容 */}
+                        {/* Content */}
                         <p className="text-sm text-slate-700 leading-relaxed mb-4">
                             {getTooltipContent()}
                         </p>
 
-                        {/* 按钮组 */}
+                        {/* Button group */}
                         <div className="flex justify-between items-center gap-3">
                             <button
                                 onClick={onSkip}

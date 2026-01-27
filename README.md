@@ -236,14 +236,7 @@ export AGENTMARK_TOOL_MODE=proxy
 uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
 ```
 
-#### Step 2: Start Backend Service
-
-```bash
-conda activate AgentMark
-python dashboard/server/app.py
-```
-
-#### Step 3: Verify Watermark Injection
+#### Step 2: Verify Watermark Injection
 
 Observe real-time logs in the **gateway proxy terminal**:
 - `[agentmark:scoring_request]`: Scoring instruction injection
@@ -251,6 +244,15 @@ Observe real-time logs in the **gateway proxy terminal**:
 - `[watermark]`: Watermark results and visualization data
 
 > **Note**: If you encounter `502 Bad Gateway`, run `export no_proxy=localhost,127.0.0.1,0.0.0.0`.
+
+#### Framework Compatibility
+AgentMark Proxy supports all Agent frameworks built on **OpenAI Chat Completions API** (e.g., OpenAI Swarm, LangChain, AutoGen).
+
+- **✅ Supported**: Frameworks using the standard `/v1/chat/completions` endpoint. Simply configure `base_url`.
+- **❌ Unsupported**: Frameworks using stateful APIs (e.g., Assistants API, Responses API) or non-OpenAI protocols.
+
+> **Tip**: Chat Completions API is **stateless**, while Assistants API is **stateful**. The Proxy is designed for stateless operations and thus supports only the former.
+
 
 ---
 

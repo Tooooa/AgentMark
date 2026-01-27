@@ -237,14 +237,7 @@ export AGENTMARK_TOOL_MODE=proxy
 uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
 ```
 
-#### Step 2：启动后端服务
-
-```bash
-conda activate AgentMark
-python dashboard/server/app.py
-```
-
-#### Step 3：验证水印注入
+#### Step 2：验证水印注入
 
 在 **网关代理终端** 可看到实时日志：
 - `[agentmark:scoring_request]`：评分指令注入
@@ -252,6 +245,15 @@ python dashboard/server/app.py
 - `[watermark]`：水印结果与可视化数据
 
 > **注意**: 如果遇到 `502 Bad Gateway`，请设置 `export no_proxy=localhost,127.0.0.1,0.0.0.0`。
+
+#### 框架兼容性
+
+AgentMark Proxy 支持所有基于 **OpenAI Chat Completions API** 的 Agent 框架（如 OpenAI Swarm、LangChain、AutoGen 等）。
+
+- **✅ 支持**：使用标准 `/v1/chat/completions` 接口的框架。只需配置 `base_url` 即可。
+- **❌ 不支持**：使用有状态 API（如 Assistants API、Responses API）或非 OpenAI 协议的框架。
+
+> **提示**: Chat Completions API 是**无状态**的，而 Assistants API 是**有状态**的。Proxy 基于无状态设计，因此仅支持前者。
 
 ---
 

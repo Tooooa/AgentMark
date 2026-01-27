@@ -31,7 +31,7 @@ interface StepDetailModalProps {
 const StepDetailModal: React.FC<StepDetailModalProps> = ({ isOpen, onClose, step, mode = 'watermarked', displayIndex }) => {
     const { t } = useI18n();
 
-    // 使用 displayIndex 如果提供了，否则使用 step.stepIndex
+    // Use displayIndex if provided, otherwise use step.stepIndex
     const stepNumber = displayIndex !== undefined ? displayIndex : step.stepIndex;
 
     if (!isOpen) return null;

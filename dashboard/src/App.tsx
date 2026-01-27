@@ -74,14 +74,14 @@ function AppContent() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isFirstEntry, setIsFirstEntry] = useState(true);
 
-  // 新手引导状态 - 从 localStorage 读取
+  // Tutorial state - read from localStorage
   const [hasCompletedTutorial, setHasCompletedTutorial] = useState(() => {
     return localStorage.getItem('agentmark_tutorial_completed') === 'true';
   });
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(1);
 
-  // Compare模式教程状态 - 从 localStorage 读取
+  // Compare mode tutorial state - read from localStorage
   const [hasCompletedCompareTutorial, setHasCompletedCompareTutorial] = useState(() => {
     return localStorage.getItem('agentmark_compare_tutorial_completed') === 'true';
   });
@@ -93,14 +93,14 @@ function AppContent() {
     handleReset();
   }, [handleReset]);
 
-  // 引导目标元素的ref
+  // Refs for tutorial target elements
   const settingsButtonRef = useRef<HTMLButtonElement>(null!);
   const channelNoiseRef = useRef<HTMLDivElement>(null!);
   const modeToggleRef = useRef<HTMLDivElement>(null!);
   const promptInputRef = useRef<HTMLInputElement>(null!);
   const decoderProgressRef = useRef<HTMLDivElement>(null!);
 
-  // Compare模式教程refs
+  // Compare mode tutorial refs
   const evaluationRef = useRef<HTMLDivElement>(null!);
   const utilityMonitorRef = useRef<HTMLDivElement>(null!);
   const chartRef = useRef<HTMLDivElement>(null!);
@@ -129,16 +129,16 @@ function AppContent() {
   };
 
   const handleNewConversation = useCallback(async () => {
-    // 直接创建新会话，由hook内部判断是否需要保存当前会话
+    // Create a new conversation directly; the hook handles whether to save the current one internally
     await startNewConversation();
   }, [startNewConversation]);
 
-  // 处理新手引导下一步
+  // Handle tutorial next step
   const handleTutorialNext = () => {
     if (tutorialStep < 4) {
       setTutorialStep(tutorialStep + 1);
     } else {
-      // 教程完成，保存持久化状态
+      // Tutorial completed, save persisted state
       setShowTutorial(false);
       setTutorialStep(1);
       setHasCompletedTutorial(true);
@@ -146,7 +146,7 @@ function AppContent() {
     }
   };
 
-  // 处理新手引导跳过
+  // Handle tutorial skip
   const handleTutorialSkip = () => {
     setShowTutorial(false);
     setTutorialStep(1);
@@ -154,7 +154,7 @@ function AppContent() {
     localStorage.setItem('agentmark_tutorial_completed', 'true');
   };
 
-  // 获取当前步骤的目标ref
+  // Get target ref for current step
   const getCurrentTutorialRef = () => {
     switch (tutorialStep) {
       case 1: return settingsButtonRef;
@@ -165,7 +165,7 @@ function AppContent() {
     }
   };
 
-  // 处理Compare模式教程下一步
+  // Handle Compare mode tutorial next step
   const handleCompareTutorialNext = () => {
     if (compareTutorialStep < 3) {
       setCompareTutorialStep(compareTutorialStep + 1);
@@ -177,14 +177,14 @@ function AppContent() {
     }
   };
 
-  // 处理Compare模式教程跳过
+  // Handle Compare mode tutorial skip
   const handleCompareTutorialSkip = () => {
     setShowCompareTutorial(false);
     setHasCompletedCompareTutorial(true);
     localStorage.setItem('agentmark_compare_tutorial_completed', 'true');
   };
 
-  // 获取Compare模式当前步骤的目标ref
+  // Get target ref for current step in Compare mode
   const getCurrentCompareTutorialRef = () => {
     switch (compareTutorialStep) {
       case 1: return evaluationRef;
@@ -194,13 +194,13 @@ function AppContent() {
     }
   };
 
-  // 初次进入主页面时自动弹出设置窗口
+  // Automatically popup settings window on first entry to main page
   useEffect(() => {
     if (!hasStarted) {
       return;
     }
     if (isFirstEntry) {
-      // 使用 setTimeout 避免 React 同步状态更新的警告
+      // Use setTimeout to avoid React synchronous state update warnings
       setTimeout(() => {
         setIsSettingsModalOpen(true);
         setIsFirstEntry(false);
@@ -208,17 +208,17 @@ function AppContent() {
     }
   }, [hasStarted, isFirstEntry]);
 
-  // 当设置窗口关闭时，如果是首次进入且未完成教程，则启动新手引导
+  // Start tutorial if settings modal closes, it's first entry, and tutorial not completed
   useEffect(() => {
     if (hasStarted && !isSettingsModalOpen && !isFirstEntry && !hasCompletedTutorial && !showTutorial && tutorialStep === 1) {
-      // 等待设置窗口关闭动画完成后再启动引导
+      // Wait for settings modal close animation before starting tutorial
       setTimeout(() => {
         setShowTutorial(true);
       }, 500);
     }
   }, [isSettingsModalOpen, isFirstEntry, hasCompletedTutorial, showTutorial, tutorialStep]);
 
-  // 首次切换到Compare模式时启动Compare教程（仅当有活动对话时）
+  // Start Compare tutorial when switching to Comparison Mode for the first time (only if active conversation exists)
   useEffect(() => {
     const hasActiveConversation = !!sessionId || (activeScenario.steps && activeScenario.steps.length > 0);
     if (isComparisonMode && hasActiveConversation && !hasCompletedCompareTutorial && !showCompareTutorial && compareTutorialStep === 1) {
@@ -229,7 +229,7 @@ function AppContent() {
   }, [isComparisonMode, sessionId, activeScenario.steps, hasCompletedCompareTutorial, showCompareTutorial, compareTutorialStep]);
 
 
-  // 移除自动初始化逻辑，由用户在设置中明确点击“应用”来启动会话
+  // Remove auto-init logic; user must explicitly click "Apply" in settings to start session
   // useEffect(() => {
   //   if (hasStarted && isLiveMode && customQuery && !sessionId) {
   //     handleInitSession();
@@ -393,7 +393,7 @@ function AppContent() {
         onReEvaluate={() => evaluateSession(locale, true)}
       />
 
-      {/* 新手引导 */}
+      {/* Tutorial */}
       <TutorialTooltip
         isOpen={showTutorial}
         step={tutorialStep}
@@ -403,7 +403,7 @@ function AppContent() {
         targetRef={getCurrentTutorialRef()}
       />
 
-      {/* Compare模式教程 */}
+      {/* Compare Mode Tutorial */}
       <TutorialTooltip
         isOpen={showCompareTutorial}
         step={compareTutorialStep}

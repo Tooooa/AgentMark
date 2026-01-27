@@ -69,16 +69,16 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         onClick={onClose}
                         className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors font-medium"
                     >
-                        {cancelText || (locale === 'zh' ? '取消' : 'Cancel')}
+                        {cancelText || (locale === 'zh' ? 'Cancel' : 'Cancel')}
                     </button>
                     <button
                         onClick={handleConfirm}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${isDestructive
-                                ? 'bg-red-600 hover:bg-red-700 text-white'
-                                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                             }`}
                     >
-                        {confirmText || (locale === 'zh' ? '确认' : 'Confirm')}
+                        {confirmText || (locale === 'zh' ? 'Confirm' : 'Confirm')}
                     </button>
                 </div>
             </div>

@@ -11,22 +11,22 @@ Usage:
     uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8000
 
 Client side (minimal change):
-    export OPENAI_BASE_URL=http://localhost:8000/v1   # 或直接替换调用地址
-    export OPENAI_API_KEY=<对方原有 key>              # 我们不使用，但保持兼容
+    export OPENAI_BASE_URL=http://localhost:8000/v1   # Or replace the call address directly
+    export OPENAI_API_KEY=<original key>              # Not used by us, but kept for compatibility
 
-POST /v1/chat/completions 兼容 OpenAI 风格请求：
+POST /v1/chat/completions compatible with OpenAI style requests:
     {
       "model": "...",
       "messages": [...],
       "temperature": 0.2,
       "max_tokens": 300,
-      "candidates": ["A","B","C"],   # 可选，显式提供候选
-      "context": "task||step1"       # 可选，水印解码用
+      "candidates": ["A","B","C"],   # Optional, explicitly provide candidates
+      "context": "task||step1"       # Optional, for watermark decoding
     }
 
-响应：
-    原始 LLM 响应字段 + watermark 字段（包含 action/action_args/probabilities_used/frontend_data/decoded_bits）。
-    原始 content 不做修改，方便向后兼容；消费者可读取 watermark 部分。
+Response:
+    Original LLM response fields + watermark field (contains action/action_args/probabilities_used/frontend_data/decoded_bits).
+    Original content is not modified for backward compatibility; consumers can read the watermark section.
 """
 
 from __future__ import annotations
@@ -259,7 +259,7 @@ def _inject_prompt(
     msgs.extend([_message_to_dict(m) for m in messages])
 
     if candidates:
-        user_lines = "候选动作：\n" + "\n".join(f"- {c}" for c in candidates)
+        user_lines = "Candidate actions:\n" + "\n".join(f"- {c}" for c in candidates)
         tool_lines = ""
         if tools:
             tool_specs = []
@@ -277,7 +277,7 @@ def _inject_prompt(
                     else:
                         tool_specs.append(f"- {name}(...)")
             if tool_specs:
-                tool_lines = "\n可用工具参数：\n" + "\n".join(tool_specs)
+                tool_lines = "\nAvailable tool parameters:\n" + "\n".join(tool_specs)
         # Append to last user message, or add new user message if none
         for m in reversed(msgs):
             if m["role"] == "user":
@@ -288,8 +288,9 @@ def _inject_prompt(
     else:
         # Bootstrap mode: ask LLM to propose candidates + probabilities
         bootstrap_note = (
-            "未提供候选动作，请先生成一组合理的候选动作，并在 action_weights 中给出每个候选的概率。"
-            "候选应为短语/动作名称，数量适中（3-8个）。"
+            "No candidate actions provided. Please first generate a set of reasonable candidate actions, "
+            "and provide the probability for each candidate in 'action_weights'."
+            "Candidates should be phrases/action names, in a moderate quantity (3-8)."
         )
         msgs[0]["content"] += "\n" + bootstrap_note
     # Record mode inside first system for transparency

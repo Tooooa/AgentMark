@@ -23,7 +23,7 @@ from dashboard.server.database import ConversationDB
 from dashboard.server.utils.config import PROJECT_ROOT
 
 # Import retriever (will be injected/mocked or we use global access)
-# For now, we rely on app.py injecting it or we access it effectively?
+# For now, we rely on app.py injecting it or we access it directly through the service module
 # We can import it from the service module directly
 from dashboard.server.services.retriever_service import get_retriever, is_retriever_loading
 

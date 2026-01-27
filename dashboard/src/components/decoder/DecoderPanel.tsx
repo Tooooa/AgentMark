@@ -38,7 +38,7 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
     const [showIncompleteWarning, setShowIncompleteWarning] = React.useState(false);
     const [hasSeenIncompleteWarning, setHasSeenIncompleteWarning] = React.useState(false);
 
-    // 过滤掉 user_input 和 hidden 步骤，只显示有水印数据的步骤
+    // Filter out user_input and hidden steps, only show steps with watermark data
     const datasetSteps = visibleSteps.filter(s => s.stepType !== 'user_input' && !s.isHidden);
 
     // Auto-scroll
@@ -99,7 +99,7 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
             <AnimatePresence>
                 {showIncompleteWarning && (
                     <>
-                        {/* 遮罩层 */}
+                        {/* Overlay */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -107,7 +107,7 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                             className="fixed inset-0 z-[200] bg-black/30"
                         />
 
-                        {/* 箭头指引：从解码进度（右上方）指向提示框 */}
+                        {/* Arrow guide: points from decoding progress (top right) to tooltip */}
                         {/* <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -144,7 +144,7 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                             </svg>
                         </motion.div> */}
 
-                        {/* 提示框 */}
+                        {/* Tooltip box */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -156,7 +156,7 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                             }}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            {/* 箭头在下方指向输入框 */}
+                            {/* Arrow points down to input box */}
                             <div
                                 className="absolute w-0 h-0"
                                 style={{
@@ -169,21 +169,21 @@ const DecoderPanel: React.FC<DecoderPanelProps> = ({
                                 }}
                             />
 
-                            {/* 标题 */}
+                            {/* Title */}
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="text-base font-bold text-slate-800">
                                     {locale === 'zh' ? '解码提示' : 'Decoding Notice'}
                                 </span>
                             </div>
 
-                            {/* 内容 */}
+                            {/* Content */}
                             <p className="text-sm text-slate-700 leading-relaxed mb-4">
                                 {locale === 'zh'
                                     ? `当前解码进度为${currentRank}/${requiredRank}，继续输入prompt可继续收集数据集，解码进度满才能解码出水印载荷。`
                                     : `Current decoding progress is ${currentRank}/${requiredRank}. Continue inputting prompts to collect more datasets. Decoding progress must be full to decode the watermark payload.`}
                             </p>
 
-                            {/* 按钮 */}
+                            {/* Button */}
                             <div className="flex justify-end">
                                 <button
                                     onClick={() => {

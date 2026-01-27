@@ -44,12 +44,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }, [isOpen]);
 
     const handlePayloadChange = (newPayload: string) => {
-        // 验证载荷内容只包含0和1
+        // Verify payload content contains only 0 and 1
         const isValidPayload = /^[01]*$/.test(newPayload);
 
         if (!isValidPayload && newPayload !== '') {
             setShowPayloadFormatError(true);
-            return; // 不更新payload
+            return; // Don't update payload
         } else {
             setShowPayloadFormatError(false);
         }
@@ -61,7 +61,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     };
 
     const handleApply = () => {
-        // 只有在实时模式且有自定义查询内容时才初始化会话
+        // Only initialize session in live mode with custom query content
         if (onInitSession && customQuery.trim()) {
             onInitSession();
         }

@@ -41,7 +41,7 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const isAtBottomRef = useRef(true);
     const { t, locale } = useI18n();
-    const [continueInput, setContinueInput] = useState(''); // 添加输入框状态管理
+    const [continueInput, setContinueInput] = useState(''); // Add input state management
 
     // Track user scroll position
     const handleScroll = () => {
@@ -151,8 +151,8 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                 )}
 
                 {visibleSteps.map((step, index) => {
-                    // 计算显示索引：跳过 user_input 类型的步骤
-                    // 只计算非 user_input 步骤的序号
+                    // Calculate display index: skip user_input steps
+                    // Only count non-user_input steps
                     const nonUserSteps = visibleSteps.slice(0, index + 1).filter(s => s.stepType !== 'user_input' && !s.isHidden);
                     const displayIndex = nonUserSteps.length;
 
@@ -240,7 +240,7 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                                                 if (e.key === 'Enter' && !isSending && !isPlaying) {
                                                     const val = continueInput.trim();
                                                     if (val && onContinue) {
-                                                        setContinueInput(''); // 立即清空
+                                                        setContinueInput(''); // Clear immediately
                                                         setIsSending(true);
                                                         setShowPrompts(false);
                                                         try {
@@ -263,7 +263,7 @@ const FlowFeed: React.FC<FlowFeedProps> = ({
                                             onClick={async () => {
                                                 const val = continueInput.trim();
                                                 if (val && onContinue) {
-                                                    setContinueInput(''); // 立即清空
+                                                    setContinueInput(''); // Clear immediately
                                                     setIsSending(true);
                                                     setShowPrompts(false);
                                                     try {
