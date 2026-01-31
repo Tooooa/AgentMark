@@ -3,151 +3,153 @@
   <img src="assets/logo.svg" width="120" alt="AgentMark Logo" style="display: inline-block; vertical-align: middle; margin-right: 20px;"/>
   <img src="assets/logo-text.svg" width="300" alt="AgentMark" style="display: inline-block; vertical-align: middle;"/>
   
-  **LLM Agent Copyright Protection & Provenance Watermarking Framework**
+  **LLM Agent 版权保护与溯源水印框架**
 
-  [简体中文](README_zh.md) | [English](README.md)
+  [简体中文](README.md) | [English](README_en.md)
 
+  [![Paper](https://img.shields.io/badge/Paper-arXiv-red)](https://arxiv.org/abs/2601.03294)
   ![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)
   ![License](https://img.shields.io/badge/license-MIT-green)
 </div>
 
 <div align="center">
-  <img src="assets/overview.png" width="75%" alt="AgentMark Overview"/>
+  <img src="assets/overview_zh.png" width="75%" alt="AgentMark Overview"/>
 </div>
 
 ---
 
 
-**AgentMark** is an experimental and evaluation framework for **behavioral watermarking of LLM agents**, implementing the utility-preserving and distribution-preserving watermark algorithms proposed in the **Agent Mark** paper.
+**AgentMark** 是一个专注于 **LLM Agent 行为水印（Behavioral Watermarking）** 的实验与评测框架，实现了 **Agent Mark** 论文中提出的效用保持（Utility Preservation）和分布保留（Distribution-Preserving）水印算法。
 
-The project provides a reproducible, modular, and extensible codebase to evaluate watermark performance, robustness, and stealth in complex agent tasks. It decomposes agent decision-making into **planning behavior** and **execution action**, embedding watermarks at the planning stage via distribution-preserving sampling to maintain downstream utility while enabling verifiable ownership protection.
+本项目旨在提供一套可复现、模块化且易于扩展的代码库，用于评估水印算法在复杂 Agent 任务中的性能、鲁棒性及隐蔽性。核心机制将 Agent 的决策过程分解为 **规划行为（Planning Behavior）** 和 **执行动作（Execution Action）**，通过在规划阶段进行分布保留采样来嵌入水印，从而在不影响下游任务效用（Utility）的前提下实现可验证的版权保护。
 
 <div align="center">
-  <img src="assets/framework.png" width="100%" alt="AgentMark Framework"/>
+  <img src="assets/framework_zh.png" width="100%" alt="AgentMark Framework"/>
 </div>
 
-<h3 align="center">📷 Interface Preview</h3>
+
+<h3 align="center">📷 界面预览</h3>
 
 <div align="center">
 
 <table align="center">
   <tr>
     <td align="center" width="50%">
-      <strong>🤖 Platform Homepage</strong><br>
-      <img src="assets/homepage.gif" width="100%" alt="Platform Homepage"><br>
-      Quick access and task management
+      <strong>🤖 平台首页</strong><br>
+      <img src="assets/homepage.gif" width="100%" alt="平台首页"><br>
+      快速接入与任务管理
     </td>
     <td align="center" width="50%">
-      <strong>⚔️ Watermark Comparison Mode</strong><br>
-      <img src="assets/comparison_mode.gif" width="100%" alt="Watermark Comparison Mode"><br>
-      Compare behavior between watermarked and non-watermarked agents
+      <strong>⚔️ 水印对比模式</strong><br>
+      <img src="assets/comparison_mode.gif" width="100%" alt="水印对比模式"><br>
+      对比有无水印 Agent 的行为差异
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <strong>📄 Real-time Logs</strong><br>
-      <img src="assets/execution_trace.gif" width="100%" alt="Real-time Logs"><br>
-      View agent reasoning and execution process in real-time
+      <strong>📄 实时日志</strong><br>
+      <img src="assets/execution_trace.gif" width="100%" alt="实时日志"><br>
+      实时查看 Agent 思考与执行过程
     </td>
     <td align="center" width="50%">
-      <strong>🛡️ Robustness Verification</strong><br>
-      <img src="assets/log_loss_robustness.gif" width="100%" alt="Robustness Verification"><br>
-      Simulate log loss to verify watermark decoding
+      <strong>🛡️ 鲁棒性验证</strong><br>
+      <img src="assets/log_loss_robustness.gif" width="100%" alt="鲁棒性验证"><br>
+      模拟日志丢失场景下的水印解码验证
     </td>
   </tr>
 </table>
 
 </div>
 
-### ✨ Key Features
-- **💎 Utility Preservation**: Strict distribution-preserving sampling keeps watermarked behavior statistically indistinguishable from the original.
-- **🛡️ Robustness**: Erasure-resilient coding and context-bound randomness handle missing logs and truncated trajectories.
-- **🔢 Multi-bit Capacity**: Supports embedding multi-bit information in a single trajectory for precise ownership attribution and provenance.
-- **🌍 Multi-environment Support**: Covers tool use, embodied intelligence, and social simulations.
+### ✨ 主要特性：
+- **💎 效用保持 (Utility Preservation)**: 通过严格的分布保留采样，确保加水印后的 Agent 行为分布与原始分布统计不可区分。
+- **🛡️ 高鲁棒性 (Robustness)**: 采用抗擦除编码（Erasure-Resilient Coding）和环境上下文绑定的随机性，能有效应对日志缺失（Missing Logs）和轨迹截断（Trajectory Truncation）。
+- **🔢 多比特容量 (Multi-bit Capacity)**: 支持在单条轨迹中嵌入多比特信息，实现精确的版权归属与溯源。
+- **🌍 多环境支持**: 覆盖工具使用、具身智能及社交模拟等多种场景。
 
-### 🎮 Supported Environments
-- **🛠️ ToolBench**: Complex tool-using scenarios with real-world API calls.
-- **🏠 ALFWorld**: Text-based interactive household decision tasks.
-- **📱 Oasis (Twitter/Reddit)**: Social-media behavior watermarking experiments.
+### 🎮 支持的实验环境：
+- **🛠️ ToolBench**: 模拟真实世界 API 调用的复杂工具使用场景。
+- **🏠 ALFWorld**: 基于文本的交互式家庭环境决策任务。
+- **📱 Oasis (Twitter/Reddit)**: 社交媒体环境下的行为水印实验。
 
 ---
 
-## 📖 Table of Contents
-- [Project Structure](#project-structure)
-- [Quick Start](#quick-start)
-  - [1. Docker One-Line Deployment (Recommended)](#1-docker-one-line-deployment-recommended)
-  - [2. Manual Environment Setup](#2-manual-environment-setup)
-  - [3. Dashboard Visualization](#3-dashboard-visualization)
-  - [4. Plug-and-Play One-click Watermarking](#4-plug-and-play-one-click-watermarking)
-- [Experiment Guide](#experiment-guide)
-  - [1. ToolBench Tool Calling Experiment](#1-toolbench-tool-calling-experiment)
-  - [2. ALFWorld Embodied Intelligence Experiment](#2-alfworld-embodied-intelligence-experiment)
-  - [3. Oasis Social Media Experiment](#3-oasis-social-media-experiment)
-  - [4. RLNC Robustness Evaluation](#4-rlnc-robustness-evaluation)
-  - [5. Semantic Rewriting Robustness Evaluation](#5-semantic-rewriting-robustness-evaluation)
-- [Citation](#citation)
+## 📖 目录
+- [项目结构](#-项目结构)
+- [快速开始](#-快速开始)
+  - [1. Docker 一键部署（推荐）](#1-docker-一键部署推荐)
+  - [2. 手动环境配置](#2-手动环境配置)
+  - [3. Dashboard 可视化](#3-dashboard-可视化)
+  - [4. 插件式一键加水印](#4-插件式一键加水印)
+- [实验指南](#-实验指南)
+  - [1. ToolBench 工具调用实验](#1-toolbench-工具调用实验)
+  - [2. ALFWorld 具身智能实验](#2-alfworld-具身体能实验)
+  - [3. Oasis 社交媒体实验](#3-oasis-社交媒体实验)
+  - [4. RLNC 鲁棒性评测](#4-rlnc-鲁棒性评测)
+  - [5. 语义重写鲁棒性评测](#5-语义重写鲁棒性评测)
+- [引用](#-引用)
 - [License](#license)
 ---
 
-## 📂 Project Structure
+## 📂 项目结构
 
 ```text
 AgentMark/
-├── assets/                         # Project assets (images, PDF)
-├── agentmark/                      # Core library: watermark algorithms & SDK
-│   ├── core/                       # Core watermark logic (ECC, sampling)
-│   ├── environments/               # Environment adapters (ToolBench, ALFWorld)
-│   ├── data/                       # Bitstreams and configuration data
-│   ├── proxy/                      # Gateway proxy for tool-use interception
-│   └── sdk/                        # Client SDK for easy integration
-├── dashboard/                      # Visualization Dashboard (Full-stack)
-│   ├── server/                     # Backend server (FastAPI)
-│   └── src/                        # Frontend source (React/Vite)
-├── experiments/                    # Experimental implementations
-│   ├── toolbench/                  # ToolBench API tool-use experiments
-│   ├── alfworld/                   # ALFWorld embodied intelligence experiments
-│   ├── oasis_watermark/            # Social-media experiments (Twitter/Reddit)
-│   ├── rlnc_trajectory/            # RLNC robustness evaluation
-│   └── semantic_rewriting/         # Semantic rewriting robustness tests
-├── output/                         # Experiment outputs (logs, predictions)
-├── docker-compose.yml              # Docker Compose (development)
-├── docker-compose.prod.yml         # Docker Compose (production/one-line deploy)
-├── environment.yml                 # Conda environment (Python 3.9)
-├── requirements.txt                # Python dependencies (pip)
-├── .env.example                    # Environment variable template
+├── assets/                         # 项目资源 (图片, PDF)
+├── agentmark/                      # 核心库：水印算法实现与 SDK
+│   ├── core/                       # 核心水印逻辑 (ECC, 采样)
+│   ├── environments/               # 环境适配器 (ToolBench, ALFWorld)
+│   ├── data/                       # 比特流和配置数据
+│   ├── proxy/                      # 网关代理 (用于拦截工具调用)
+│   └── sdk/                        # 客户端 SDK (便于集成)
+├── dashboard/                      # 可视化仪表盘 (全栈)
+│   ├── server/                     # 后端服务 (FastAPI)
+│   └── src/                        # 前端源码 (React/Vite)
+├── experiments/                    # 实验实现
+│   ├── toolbench/                  # ToolBench API 工具调用实验
+│   ├── alfworld/                   # ALFWorld 具身智能实验
+│   ├── oasis_watermark/            # 社交媒体实验 (Twitter/Reddit)
+│   ├── rlnc_trajectory/            # RLNC 鲁棒性评测
+│   └── semantic_rewriting/         # 语义重写鲁棒性测试
+├── output/                         # 实验输出 (日志, 预测结果)
+├── docker-compose.yml              # Docker Compose (开发)
+├── docker-compose.prod.yml         # Docker Compose (生产/一键部署)
+├── environment.yml                 # Conda 环境配置 (Python 3.9)
+├── requirements.txt                # Python 依赖 (pip)
+├── .env.example                    # 环境变量模板
 ├── LICENSE                         # MIT License
 ├── README.md                       # English README
 └── README_zh.md                    # Chinese README
 ```
 
-## 🚀 Quick Start
+## 🚀 快速开始
 
-### 1. 🐳 Docker One-Line Deployment (Recommended)
+### 1. 🐳 Docker 一键部署（推荐）
 
-**No dependencies required** - deploy the full Web visualization platform with one command:
+**无需安装任何依赖**，一行命令即可启动完整的 Web 可视化平台：
 
 ```bash
 curl -fL https://raw.githubusercontent.com/Tooooa/AgentMark/main/docker-compose.prod.yml -o docker-compose.yml
 docker-compose up -d
 ```
 
-🎉 **Success!** Access the dashboard at http://localhost:8080
+🎉 **启动成功！** 访问 http://localhost:8080 开始体验。
 
-> **Note**: To use LLM APIs, create a `.env` file first:
+> **注意**: 如需使用 LLM API，请先创建 `.env` 文件：
 > ```bash
 > echo "DEEPSEEK_API_KEY=your_key_here" > .env
 > ```
 
 <details>
-<summary>▶ More Docker Usage (Click to expand)</summary>
+<summary>▶ 更多 Docker 使用场景（点击展开）</summary>
 
-**Run experiment container:**
+**运行实验容器：**
 ```bash
 docker-compose up -d experiments
 docker-compose exec experiments bash
 ```
 
-**Manual image pull:**
+**手动拉取镜像：**
 ```bash
 docker pull toooa908/agentmark-backend:latest
 docker pull toooa908/agentmark-frontend:latest
@@ -156,218 +158,218 @@ docker pull toooa908/agentmark-frontend:latest
 
 ---
 
-### 2. ⚙️ Manual Environment Setup
+### 2. ⚙️ 手动环境配置
 
-If you need to modify code or develop locally, follow these steps:
+如果您需要修改代码或进行开发，请按以下步骤配置本地环境：
 
-**Requirements**: Python 3.9+
+**环境要求**: Python 3.9+
 
 ```bash
-# Create and activate environment
+# 创建并激活环境
 conda env create -f environment.yml
 conda activate AgentMark
 
-# Or install manually
+# 或者手动安装
 pip install -r requirements.txt
 
-# Configure environment variables
+# 配置环境变量
 cp .env.example .env
-# Edit .env and fill in your API keys
+# 编辑 .env 填入您的 API Key
 ```
 
 ---
 
-### 3. Dashboard Visualization
+### 3. Dashboard 可视化
 
-The dashboard provides interactive watermark experiments with real-time comparison and decoding analysis.
+Dashboard 提供了交互式的水印实验界面，包含实时对比、解码分析等功能。
 
-#### 📦 Download Retriever Cache (Required)
+#### 📦 下载检索缓存 (必需)
 
-Since ToolBench API retrieval requires loading cache files, we recommend downloading the pre-built cache to skip the time-consuming indexing process. **This is required for running the frontend.**
+由于 ToolBench API 检索需要加载缓存文件，为了免去长时间的索引构建过程，运行前端前**必须**下载预处理好的缓存文件。
 
-1. **Download file**: Download `retriever_cache.zip` from [GitHub Releases](https://github.com/Tooooa/AgentMark/releases).
-2. **Extract file**:
+1. **下载文件**: 从 [GitHub Releases](https://github.com/Tooooa/AgentMark/releases) 下载 `retriever_cache.zip` 文件。
+2. **解压文件**:
    ```bash
-   # Navigate to project root
+   # 进入项目根目录
    cd AgentMark
-   # Extract retriever cache to the specified directory
+   # 解压检索缓存到指定目录
    unzip -o retriever_cache.zip -d experiments/toolbench/data/data/toolenv/tools
    ```
 
-#### 🚀 Steps
+#### 🚀 启动步骤
 
-1. **Requirements**: Node.js 18.0+, NPM, Python (AgentMark environment).
-2. **Start Backend**:
+1. **环境要求**: Node.js 18.0+, NPM, Python (AgentMark 环境)。
+2. **启动后端**:
    ```bash
    conda activate AgentMark
    python dashboard/server/app.py
    ```
-3. **Start Frontend**:
+3. **启动前端**:
    ```bash
    cd dashboard
    npm install && npm run dev
    ```
-4. **Access**: Open `http://localhost:5173` in your browser.
+4. **访问**: 浏览器打开 `http://localhost:5173`。
 
 ---
 
-### 4. Plug-and-Play One-click Watermarking
+### 4. 插件式一键加水印
 
-Gain behavioral watermarking capabilities with zero code changes. By simply pointing your existing Agent's API Base URL to the gateway address, you can instantly enable watermarking. This mode is designed for developers to quickly add copyright protection and provenance to existing Agent systems without modifying core logic.
+无需修改原有代码，只需将现有 Agent 的 API Base URL 指向网关地址，即可一键获得行为水印能力。这种模式特别适合开发者在不触动核心逻辑的情况下，快速为已有 Agent 系统增加版权保护与溯源功能。
 
-#### Step 1: Start Gateway Proxy (AgentMark Proxy)
+#### Step 1：启动网关代理（AgentMark Proxy）
 
 ```bash
 conda activate AgentMark
-export DEEPSEEK_API_KEY=sk-your-key
+export DEEPSEEK_API_KEY=sk-你的key
 export TARGET_LLM_MODEL=deepseek-chat
 export AGENTMARK_TOOL_MODE=proxy
 uvicorn agentmark.proxy.server:app --host 0.0.0.0 --port 8001
 ```
 
-#### Step 2: Verify Watermark Injection
+#### Step 2：验证水印注入
 
-Observe real-time logs in the **gateway proxy terminal**:
-- `[agentmark:scoring_request]`: Scoring instruction injection
-- `[agentmark:tool_calls_proxy]`: Gateway-constructed tool calls
-- `[watermark]`: Watermark results and visualization data
+在 **网关代理终端** 可看到实时日志：
+- `[agentmark:scoring_request]`：评分指令注入
+- `[agentmark:tool_calls_proxy]`：网关构造的工具调用
+- `[watermark]`：水印结果与可视化数据
 
-> **Note**: If you encounter `502 Bad Gateway`, run `export no_proxy=localhost,127.0.0.1,0.0.0.0`.
+> **注意**: 如果遇到 `502 Bad Gateway`，请设置 `export no_proxy=localhost,127.0.0.1,0.0.0.0`。
 
-#### Framework Compatibility
-AgentMark Proxy supports all Agent frameworks built on **OpenAI Chat Completions API** (e.g., OpenAI Swarm, LangChain, AutoGen).
+#### 框架兼容性
 
-- **✅ Supported**: Frameworks using the standard `/v1/chat/completions` endpoint. Simply configure `base_url`.
-- **❌ Unsupported**: Frameworks using stateful APIs (e.g., Assistants API, Responses API) or non-OpenAI protocols.
+AgentMark Proxy 支持所有基于 **OpenAI Chat Completions API** 的 Agent 框架（如 OpenAI Swarm、LangChain、AutoGen 等）。
 
-> **Tip**: Chat Completions API is **stateless**, while Assistants API is **stateful**. The Proxy is designed for stateless operations and thus supports only the former.
+- **✅ 支持**：使用标准 `/v1/chat/completions` 接口的框架。只需配置 `base_url` 即可。
+- **❌ 不支持**：使用有状态 API（如 Assistants API、Responses API）或非 OpenAI 协议的框架。
 
+> **提示**: Chat Completions API 是**无状态**的，而 Assistants API 是**有状态**的。Proxy 基于无状态设计，因此仅支持前者。
 
 ---
 
-## 📚 Experiment Guide
+## 📚 实验指南
 
-Detailed experimental guides are as follows:
+详细的实验运行指南如下：
 
-### 1. ToolBench Tool Calling Experiment
-- **Overview**: Simulates real-world API calling scenarios to evaluate watermark impact on tool usage and robustness.
+### 1. ToolBench 工具调用实验
+- **简介**: 模拟真实世界 API 调用场景，评估水印对工具使用能力和鲁棒性的影响。
 
-#### 📊 Dataset Preparation (Required)
+#### 📊 数据集准备 (必需)
 
-You must complete these steps before running ToolBench experiments:
+运行 ToolBench 实验前必须完成以下步骤：
 
-1. **Download Dataset**: From the [ToolBench repository](https://github.com/OpenBMB/ToolBench), download the full dataset (~2-3 GB).
-2. **Directory Config**: Place extracted `data` under `experiments/toolbench/data/`. Ensure structure:
+1. **下载数据集**: 从 [ToolBench 官方仓库](https://github.com/OpenBMB/ToolBench) 下载完整数据集（含 queries, tools, reference answers，约 2-3 GB）。
+2. **目录配置**: 将解压后的 `data` 文件夹放入 `experiments/toolbench/data/` 目录下，确保结构如下：
    ```text
    experiments/toolbench/data/data/
    ├── test_query/
-   ├── toolenv/tools/  # JSON definitions
+   ├── toolenv/tools/  # 包含所有工具分类 JSON
    └── answer/
    ```
 
-#### 🚀 Running Modes
-- **Directory**: `experiments/toolbench/`
-- **Two Running Modes**:
-  | Mode | Config (`use_local_model`) | Description |
-  |------|---------------------------|-------------|
-  | **API Mode** | `false` (default) | Calls remote LLM APIs (e.g., DeepSeek, OpenAI), watermark embedded via behavioral sampling |
-  | **Local Mode** | `true` | Loads local models (e.g., Llama-3), combines with SynthID text watermarking |
-- **Run Pipeline**:
+#### 🚀 运行模式
+- **目录**: `experiments/toolbench/`
+- **两种运行模式**:
+  | 模式 | 配置项 (`use_local_model`) | 说明 |
+  |------|---------------------------|------|
+  | **API 模式** | `false` (默认) | 调用远程 LLM API (如 DeepSeek, OpenAI)，水印通过行为采样嵌入 |
+  | **本地模式** | `true` | 加载本地模型 (如 Llama-3)，结合 SynthID 文本水印算法 |
+- **运行流水线**:
   ```bash
   conda activate AgentMark
-  # Run full pipeline (baseline/watermark/evaluation)
+  # 运行完整流水线 (包含 baseline/watermark/评测)
   python experiments/toolbench/scripts/run_pipeline.py
   ```
-- **Key Config**: `experiments/toolbench/configs/pipeline_config.json`
-  - Switch mode: modify `common_config.use_local_model` to `true` or `false`
-  - Local mode requires `local_model_path` pointing to model weights
+- **关键配置**: `experiments/toolbench/configs/pipeline_config.json`
+  - 切换模式: 修改 `common_config.use_local_model` 为 `true` 或 `false`
+  - 本地模式需额外配置 `local_model_path` 指向模型权重路径
 
-### 2. ALFWorld Embodied Intelligence Experiment
-- **Overview**: Text-based interactive household decision tasks, evaluating watermark impact on agent planning and execution.
+### 2. ALFWorld 具身智能实验
+- **简介**: 基于文本的交互式家庭环境决策任务，评估水印对 Agent 规划与执行能力的影响。
 
-#### 📊 Dataset Preparation
-Datasets are downloaded automatically to `~/.cache/alfworld`, or run manually:
+#### 📊 数据集准备
+数据集在运行时会自动下载到 `~/.cache/alfworld`，或手动运行：
 ```bash
 alfworld-download
 ```
-Preconfigured in `experiments/alfworld/configs/base_config.yaml`.
+配置已预设在 `experiments/alfworld/configs/base_config.yaml`。
 
-#### 🚀 Running Guide
-- **Directory**: `experiments/alfworld/`
-- **Environment Install**:
+#### 🚀 运行指南
+- **目录**: `experiments/alfworld/`
+- **环境安装**:
   ```bash
-  pip install alfworld  # Install on top of AgentMark environment
+  pip install alfworld  # 需在 AgentMark 环境基础上安装
   ```
-- **Run Pipeline**:
+- **运行流水线**:
   ```bash
   conda activate AgentMark
-  # Run full pipeline (baseline/watermark/evaluation)
+  # 运行完整流水线 (包含 baseline/watermark/评测)
   python experiments/alfworld/scripts/run_experiment.py --config experiments/alfworld/configs/config.json
   ```
-- **Key Config**: `experiments/alfworld/configs/config.json`
+- **关键配置**: `experiments/alfworld/configs/config.json`
 
-### 3. Oasis Social Media Experiment
+### 3. Oasis 社交媒体实验
 > [!NOTE]
-> 1. The `oasis/` directory is a **modified submodule** containing customized watermark logic.
-> 2. Use a separate `oasis` environment (Python 3.10+).
+> 1. 本目录下的 `oasis/` 是 **修改后的子依赖库** (Modified Submodule)，包含定制化的水印逻辑。
+> 2. 请使用独立的 `oasis` (Python 3.10+) 环境运行。
 
-- **Environment Install**:
+- **环境安装**:
   ```bash
-  # 1. Create environment (Python 3.10+ recommended)
+  # 1. 创建环境 (建议 Python 3.10+)
   conda create -n oasis python=3.10 -y
   conda activate oasis
   
-  # 2. Install Oasis package
+  # 2. 安装 Oasis 包
   pip install camel-oasis
   ```
-  See [Oasis README](experiments/oasis_watermark/oasis/README.md) for details.
+  详细说明请参考 [Oasis README](experiments/oasis_watermark/oasis/README.md)。
 
-- **Overview**: Simulates user behavior and watermark injection on Twitter and Reddit.
-- **Directory**: `experiments/oasis_watermark/`
-- **Twitter Experiment**:
-  - Directory: `experiments/oasis_watermark/twitter_watermark_experiment/`
-  - **Run**:
+- **简介**: 模拟 Twitter 和 Reddit 上的用户行为与水印注入。
+- **目录**: `experiments/oasis_watermark/`
+- **Twitter 实验**:
+  - 目录: `experiments/oasis_watermark/twitter_watermark_experiment/`
+  - **运行**:
     ```bash
     cd experiments/oasis_watermark/twitter_watermark_experiment
-    # Configure config.py or set DEEPSEEK_API_KEY environment variable
+    # 需配置 config.py 或设置环境变量 DEEPSEEK_API_KEY
     python run_experiment.py
-    # Run evaluation
+    # 运行评测
     python evaluate_metrics_llm.py
     ```
-- **Reddit Experiment**:
-  - Directory: `experiments/oasis_watermark/reddit_watermark_experiment/`
-  - **Run**:
+- **Reddit 实验**:
+  - 目录: `experiments/oasis_watermark/reddit_watermark_experiment/`
+  - **运行**:
     ```bash
     cd experiments/oasis_watermark/reddit_watermark_experiment
     python run_experiment.py
-    # Run evaluation
+    # 运行评测
     python evaluate_metrics_llm.py
     ```
-  - **Note**: Simulates AI-related discussions in the `r/TechFuture` community.
+  - **说明**: 模拟 `r/TechFuture` 社区中关于 AI 话题的讨论。
 
-### 4. RLNC Robustness Evaluation
-- **Overview**: Tests RLNC (Random Linear Network Coding) watermark scheme recovery under packet loss/erasure scenarios.
-- **Directory**: `experiments/rlnc_trajectory/`
-- **Core Scripts**:
-  | Script | Function |
-  |--------|----------|
-  | `scripts/rlnc_step_erasure_eval.py` | Erasure robustness evaluation (simulates various packet loss rates) |
-  | `scripts/analyze_fpr.py` | **False Positive Rate (FPR) analysis** - simulates "no watermark" and "wrong key" attack scenarios |
-- **Run Robustness Evaluation**:
+### 4. RLNC 鲁棒性评测
+- **简介**: 测试基于 RLNC (Random Linear Network Coding) 的水印方案在丢包/擦除场景下的恢复能力。
+- **目录**: `experiments/rlnc_trajectory/`
+- **核心脚本**:
+  | 脚本 | 功能 |
+  |------|------|
+  | `scripts/rlnc_step_erasure_eval.py` | 擦除鲁棒性评测 (模拟不同丢包率) |
+  | `scripts/analyze_fpr.py` | **误报率 (FPR) 分析** - 模拟"未加水印"和"错误密钥"攻击场景 |
+- **运行鲁棒性评测**:
   ```bash
   cd experiments/rlnc_trajectory
   python scripts/rlnc_step_erasure_eval.py --config rlnc_eval_config.json
   ```
-- **Run FPR Analysis**:
+- **运行 FPR 分析**:
   ```bash
   python scripts/analyze_fpr.py --config rlnc_fpr_config.json
   ```
-- **Key Configs**: `rlnc_eval_config.json`, `rlnc_fpr_config.json`
+- **关键配置**: `rlnc_eval_config.json`， `rlnc_fpr_config.json`
 
-### 5. Semantic Rewriting Robustness Evaluation
-- **Overview**: Tests differential watermark robustness against semantic rewriting attacks.
-- **Directory**: `experiments/semantic_rewriting/`
-- **Run**:
+### 5. 语义重写鲁棒性评测
+- **简介**: 测试差分水印在面对语义重写攻击 (Semantic Rewriting Attack) 时的鲁棒性。
+- **目录**: `experiments/semantic_rewriting/`
+- **运行**:
   ```bash
   cd experiments/semantic_rewriting
   python scripts/robustness_test.py \
@@ -384,9 +386,9 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-## 📄 Citation
+## 📄 引用
 
-If you use this project in your research, please cite our paper:
+如果您在研究中使用了本项目，请引用我们的论文：
 
 ```bibtex
 @misc{agentmark2025,
