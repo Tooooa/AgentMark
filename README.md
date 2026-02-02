@@ -391,14 +391,11 @@ This project is licensed under the [MIT License](LICENSE).
 如果您在研究中使用了本项目，请引用我们的论文：
 
 ```bibtex
-@misc{agentmark2025,
-      title={Agent Mark: Provable Multi-bit Watermarking for LLM Agents}, 
-      author={Zehan Qi and Guoqiang Jin and Xin Gao and Yibo Zhu and Zhaofeng He},
-      year={2025},
-      eprint={2601.03294},
-      archivePrefix={arXiv},
-      primaryClass={cs.CR},
-      url={https://arxiv.org/abs/2601.03294}, 
+@article{huang2026agentmark,
+  title={AgentMark: Utility-Preserving Behavioral Watermarking for Agents},
+  author={Huang, Kaibo and Tan, Jin and Wei, Yukun and Li, Wanling and Zhang, Zipei and Tian, Hui and Yang, Zhongliang and Zhou, Linna},
+  journal={arXiv preprint arXiv:2601.03294},
+  year={2026}
 }
 ```
 
