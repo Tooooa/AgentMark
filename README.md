@@ -19,9 +19,9 @@
 ---
 
 
-**AgentMark** 是一个专注于 **LLM Agent 行为水印（Behavioral Watermarking）** 的实验与评测框架，实现了 **Agent Mark** 论文中提出的效用保持（Utility Preservation）和分布保留（Distribution-Preserving）水印算法。
+**AgentMark** 是一个专注于 **LLM Agent 行为水印** 的实验与评测框架，实现了 **Agent Mark** 论文中提出的效用保持和分布保留水印算法。
 
-本项目旨在提供一套可复现、模块化且易于扩展的代码库，用于评估水印算法在复杂 Agent 任务中的性能、鲁棒性及隐蔽性。核心机制将 Agent 的决策过程分解为 **规划行为（Planning Behavior）** 和 **执行动作（Execution Action）**，通过在规划阶段进行分布保留采样来嵌入水印，从而在不影响下游任务效用（Utility）的前提下实现可验证的版权保护。
+本项目旨在提供一套可复现、模块化且易于扩展的代码库，用于评估水印算法在复杂 Agent 任务中的性能、鲁棒性及隐蔽性。核心机制将 Agent 的决策过程分解为 **规划行为** 和 **执行动作**，通过在规划阶段进行分布保留采样来嵌入水印，从而在不影响下游任务效用的前提下实现可验证的版权保护。
 
 <div align="center">
   <img src="assets/framework_zh.png" width="100%" alt="AgentMark Framework"/>
@@ -62,9 +62,9 @@
 </div>
 
 ### ✨ 主要特性：
-- **💎 效用保持 (Utility Preservation)**: 通过严格的分布保留采样，确保加水印后的 Agent 行为分布与原始分布统计不可区分。
-- **🛡️ 高鲁棒性 (Robustness)**: 采用抗擦除编码（Erasure-Resilient Coding）和环境上下文绑定的随机性，能有效应对日志缺失（Missing Logs）和轨迹截断（Trajectory Truncation）。
-- **🔢 多比特容量 (Multi-bit Capacity)**: 支持在单条轨迹中嵌入多比特信息，实现精确的版权归属与溯源。
+- **💎 效用保持**: 通过严格的分布保留采样，确保加水印后的 Agent 行为分布与原始分布统计不可区分。
+- **🛡️ 高鲁棒性**: 采用抗擦除编码和环境上下文绑定的随机性，能有效应对日志缺失和轨迹截断。
+- **🔢 多比特容量**: 支持在单条轨迹中嵌入多比特信息，实现精确的版权归属与溯源。
 - **🌍 多环境支持**: 覆盖工具使用、具身智能及社交模拟等多种场景。
 
 ### 🎮 支持的实验环境：
@@ -217,7 +217,7 @@ Dashboard 提供了交互式的水印实验界面，包含实时对比、解码�
 
 无需修改原有代码，只需将现有 Agent 的 API Base URL 指向网关地址，即可一键获得行为水印能力。这种模式特别适合开发者在不触动核心逻辑的情况下，快速为已有 Agent 系统增加版权保护与溯源功能。
 
-#### Step 1：启动网关代理（AgentMark Proxy）
+#### Step 1：启动网关代理
 
 ```bash
 conda activate AgentMark
@@ -277,7 +277,7 @@ AgentMark Proxy 支持所有基于 **OpenAI Chat Completions API** 的 Agent 框
 - **运行流水线**:
   ```bash
   conda activate AgentMark
-  # 运行完整流水线 (包含 baseline/watermark/评测)
+  # 运行完整流水线 (包含基线/水印/评测)
   python experiments/toolbench/scripts/run_pipeline.py
   ```
 - **关键配置**: `experiments/toolbench/configs/pipeline_config.json`
@@ -303,14 +303,14 @@ alfworld-download
 - **运行流水线**:
   ```bash
   conda activate AgentMark
-  # 运行完整流水线 (包含 baseline/watermark/评测)
+  # 运行完整流水线 (包含基线/水印/评测)
   python experiments/alfworld/scripts/run_experiment.py --config experiments/alfworld/configs/config.json
   ```
 - **关键配置**: `experiments/alfworld/configs/config.json`
 
 ### 3. Oasis 社交媒体实验
 > [!NOTE]
-> 1. 本目录下的 `oasis/` 是 **修改后的子依赖库** (Modified Submodule)，包含定制化的水印逻辑。
+> 1. 本目录下的 `oasis/` 是 **修改后的子依赖库**，包含定制化的水印逻辑。
 > 2. 请使用独立的 `oasis` (Python 3.10+) 环境运行。
 
 - **环境安装**:
@@ -354,7 +354,7 @@ alfworld-download
   | 脚本 | 功能 |
   |------|------|
   | `scripts/rlnc_step_erasure_eval.py` | 擦除鲁棒性评测 (模拟不同丢包率) |
-  | `scripts/analyze_fpr.py` | **误报率 (FPR) 分析** - 模拟"未加水印"和"错误密钥"攻击场景 |
+  | `scripts/analyze_fpr.py` | **误报率分析** - 模拟"未加水印"和"错误密钥"攻击场景 |
 - **运行鲁棒性评测**:
   ```bash
   cd experiments/rlnc_trajectory
@@ -367,7 +367,7 @@ alfworld-download
 - **关键配置**: `rlnc_eval_config.json`， `rlnc_fpr_config.json`
 
 ### 5. 语义重写鲁棒性评测
-- **简介**: 测试差分水印在面对语义重写攻击 (Semantic Rewriting Attack) 时的鲁棒性。
+- **简介**: 测试差分水印在面对语义重写攻击时的鲁棒性。
 - **目录**: `experiments/semantic_rewriting/`
 - **运行**:
   ```bash
